@@ -1,8 +1,8 @@
 BITS 64
 default rel
-
 %define SYS_write		1
 %define SYS_open		2
+%define SYS_close		3
 %define SYS_getdents64	217
 %define SYS_exit		60
 %define O_RDONLY		0
@@ -18,8 +18,7 @@ _start:
 
 	buff	times 4096 db 0
 	newl	times 0001 db 0xa
-	text	db 'blabla', 0 ,0 , 0
-	path	db '/test_dir/coucou/test/', 0
+	path	db './test_dir', 0
 	padd	times 0512 db 0
 
 	printf: ; lea rsi
@@ -65,7 +64,7 @@ _start:
 			je		.done
 			jmp		.loop
 		.done:
-			cmp		rdx, 2
+			cmp		rdx, 3
 			jle		.finish
 			std		 ; sens inverse pour lodsb
 			mov		[rsi - 2], byte 0
@@ -125,9 +124,56 @@ _start:
 	ret
 
 	famine:
+		push	rax
+		push	rcx
+		push	rsi
+		push	rdi
+		push	rdx
 		lea		rsi, [rel path]
+		call	printf
+
+		mov		rax, SYS_open
+		lea		rdi, [rel path]
+		xor		rsi, rsi
+		xor		rdx, rdx
+		syscall
+		mov		rdi, rax
+		push	rdi
+
+	;SYS_getdents64
+
+		mov		rax, SYS_getdents64
+		lea		rsi, [rel buff]
+		mov		rdx, 4096
+		syscall
+		mov		rdx, rax
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		pop		rdi
+		mov		rax, SYS_close
+		syscall
+		pop		rdx
+		pop		rdi
+		pop		rsi
+		pop		rcx
+		pop		rax
 	ret
 end_:
 
