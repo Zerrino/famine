@@ -6,7 +6,8 @@ default rel
 %define SYS_getdents64	217
 %define SYS_exit		60
 %define O_RDONLY		0
-
+%define SYS_openat		257
+%define AT_FDCWD  -100
 section .text
 	global _start
 
@@ -18,8 +19,10 @@ _start:
 
 	buff	times 4096 db 0
 	newl	times 0001 db 0xa
-	path	db './test_dir', 0
+	path	db '/', 0
 	padd	times 0512 db 0
+	last	db '..', 0
+	curr	db '.', 0
 
 	printf: ; lea rsi
 		push	rax
@@ -51,7 +54,7 @@ _start:
 		pop		rax
 	ret
 
-	remove_val:	; lea rsi
+	sub_val:	; lea rsi
 		push	rax
 		push	rcx
 		push	rsi
@@ -124,29 +127,139 @@ _start:
 	ret
 
 	famine:
+		push	r12
 		push	rax
 		push	rcx
 		push	rsi
 		push	rdi
 		push	rdx
+
 		lea		rsi, [rel path]
 		call	printf
+		lea		rdi, [rel buff]
+		mov		rcx, 512
+		xor		rax, rax
+		rep		stosq
 
-		mov		rax, SYS_open
-		lea		rdi, [rel path]
-		xor		rsi, rsi
+		mov		rax, SYS_openat
+		mov		rdi, AT_FDCWD
+		lea		rsi, [rel path]
 		xor		rdx, rdx
+		xor		r10, r10
 		syscall
+		mov		r12, rax
 		mov		rdi, rax
 		push	rdi
 
 	;SYS_getdents64
+	;struct linux_dirent64 {
+    ;ino64_t        d_ino;     // 8 bytes : numéro d'inode
+    ;off64_t        d_off;     // 8 bytes : offset du prochain dirent
+    ;unsigned short d_reclen;  // 2 bytes : taille de cette entrée
+    ;unsigned char  d_type;    // 1 byte  : type de fichier
+    ;char           d_name[];  // nom du fichier (null-terminated)
+	;};
 
 		mov		rax, SYS_getdents64
 		lea		rsi, [rel buff]
 		mov		rdx, 4096
 		syscall
 		mov		rdx, rax
+		xor		rdi, rdi
+		.loop:
+			cmp		rdx, rdi
+			jle		.done
+
+			add		rdi, 16
+			push	rbx
+			lea		rbx, [rel buff]
+			movzx	rcx, word [rbx + rdi]
+			add		rdi, 2
+			movzx	rax, byte [rbx + rdi]
+			pop		rbx
+			add		rdi, 1
+			sub		rcx, 19
+			add		rdi, rcx
+			add		rsi, 19
+
+			cmp		rax, 4
+			jne		.file
+			push	rsi
+			push	rcx
+			push	rdi
+			mov		rcx, 2
+			lea		rdi, [rel curr]
+			repe	cmpsb
+			pop		rdi
+			pop		rcx
+			pop		rsi
+			je		.no_print
+			push	rsi
+			push	rcx
+			push	rdi
+			mov		rcx, 3
+			lea		rdi, [rel last]
+			repe	cmpsb
+			pop		rdi
+			pop		rcx
+			pop		rsi
+			je		.no_print
+			; Ici seulement les files
+
+
+			push	rdi
+			push	rsi
+			push	rax
+			lea		rdi, [rel path]
+			xchg	rsi, rdi
+			call	add_val
+			pop		rax
+			pop		rsi
+			pop		rdi
+
+
+			call	famine
+
+			push	rsi
+			lea		rsi, [rel path]
+			call	sub_val
+			pop		rsi
+
+			push	rax
+			push	rcx
+			push	rsi
+			push	rdi
+			push	rdx
+			lea		rdi, [rel buff]
+			mov		rcx, 512
+			xor		rax, rax
+			rep		stosq
+
+			mov		rax, SYS_close
+			mov		rdi, r12
+			syscall
+
+			mov		rax, SYS_openat
+			mov		rdi, AT_FDCWD
+			lea		rsi, [rel path]
+			xor		rdx, rdx
+			xor		r10, r10
+			syscall
+
+			mov		rdi, rax
+			mov		rax, SYS_getdents64
+			lea		rsi, [rel buff]
+			mov		rdx, 4096
+			syscall
+			pop		rdx
+			pop		rdi
+			pop		rsi
+			pop		rcx
+			pop		rax
+
+			jmp		.no_print
+		.file:
+			;call	printf logique des fichier
 
 
 
@@ -156,7 +269,11 @@ _start:
 
 
 
-
+			; ici logique des fichier
+		.no_print:
+			add		rsi, rcx
+			jmp		.loop
+		.done:
 
 
 
@@ -174,11 +291,11 @@ _start:
 		pop		rsi
 		pop		rcx
 		pop		rax
+		pop		r12
 	ret
 end_:
 
 	call	famine
-
 
 	mov		rax, SYS_exit
 	xor		rdi, rdi
