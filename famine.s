@@ -122,8 +122,8 @@ entry_point:
 
 	mov		rax, [rel buf0 + 24]
 
-	movzx   rcx, word [rel buf0 + 0x38]
-	movzx   rdi, word [rel buf0 + 0x36]
+	movzx	rcx, word [rel buf0 + 0x38]
+	movzx	rdi, word [rel buf0 + 0x36]
 	xor		r11, r11
 	xor		r10, r10
 	; %rdi %rsi %rdx %r10 %r8 %r9
