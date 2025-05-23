@@ -632,7 +632,6 @@ end_:
 	cmp		rax, 0
 	jle		.just_quit
 	mov		r12, rax
-	; sys_pread64	unsigned long fd	char *buf	size_t count	loff_t pos
 
 	mov		rax, SYS_pread64
 	mov		rdi, r12
