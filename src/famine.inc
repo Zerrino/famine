@@ -10,6 +10,8 @@
 %define SYS_openat		257
 %define AT_FDCWD  -100
 
+%define FAMINE_SIZE end_addr - _start
+
 %macro PUSH_ALL 0
     push	rax
     push	rbx

