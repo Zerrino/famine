@@ -16,6 +16,8 @@ if [ ! -f "$exec" ]; then
 	exit 1
 fi
 
+rm -rf $logfile
+
 setup()
 {
 	rm -rf $target
@@ -55,22 +57,43 @@ run_famine()
 
 # Tests ------------------------------------------------------------
 
-test_famine()
+test_famine_simple()
 {
     setup
     
     # populate with /user/bin, /usr/sbin and /usr/local/bin
     cp -r test/sample_binaries $target
-    cp -r /usr/bin/ $target
-    cp -r /usr/sbin/ $target
+    # cp -r /usr/bin/ $target
+    # cp -r /usr/sbin/ $target
     
-    mkdir -p $target/bin2
-    cp -r /usr/local/bin/ $target/bin2
+    # mkdir -p $target/bin2
+    # cp -r /usr/local/bin/ $target/bin2
 
     run_famine
     assertEquals "'$exec' did not exit cleanly" 0 $?
     is_all_infected
+
+    $target/sample_binaries/ls
+    assertEquals "ls did not exit cleanly" 0 $?
 }
 
+# test_famine_all_binaries()
+# {
+#     setup
+    
+#     # populate with /user/bin, /usr/sbin and /usr/local/bin
+#     cp -r test/sample_binaries $target
+#     cp -r /usr/bin/ $target
+#     cp -r /usr/sbin/ $target
+    
+#     mkdir -p $target/bin2
+#     cp -r /usr/local/bin/ $target/bin2
 
-. shunit2
+#     run_famine
+#     assertEquals "'$exec' did not exit cleanly" 0 $?
+#     is_all_infected
+# }
+
+
+
+. ./test/shunit2

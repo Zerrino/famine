@@ -12,6 +12,45 @@
 
 %define FAMINE_SIZE end_addr - _start
 
+; STRUCTURES
+; https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
+struc dirent
+.d_ino resb 8
+.d_off resb 8
+.d_reclen resb 2
+.d_type resb 1
+.d_name resb 8
+endstruc
+
+struc ehdr
+.e_ident        resb 16       ;    /* File identification. */
+.e_type         resb 2        ;    /* File type. */
+.e_machine      resb 2        ;    /* Machine architecture. */
+.e_version      resb 4        ;    /* ELF format version. */
+.e_entry        resb 8        ;    /* Entry point. */
+.e_phoff        resb 8        ;    /* Program header file offset. */
+.e_shoff        resb 8        ;    /* Section header file offset. */
+.e_flags        resb 4        ;    /* Architecture-specific flags. */
+.e_ehsize       resb 2        ;    /* Size of ELF header in bytes. */
+.e_phentsize    resb 2        ;    /* Size of program header entry. */
+.e_phnum        resb 2        ;    /* Number of program header entries. */
+.e_shentsize    resb 2        ;    /* Size of section header entry. */
+.e_shnum        resb 2        ;    /* Number of section header entries. */
+.e_shstrndx     resb 2        ;    /* Section name strings section. */
+endstruc
+
+struc phdr
+.p_type         resb 4        ;    /* Entry type. */
+.p_flags        resb 4        ;    /* Access permission flags. */
+.p_offset       resb 8        ;    /* File offset of contents. */
+.p_vaddr        resb 8        ;    /* Virtual address in memory image. */
+.p_paddr        resb 8        ;    /* Physical address (not used). */
+.p_filesz       resb 8        ;    /* Size of contents in file. */
+.p_memsz        resb 8        ;    /* Size of contents in memory. */
+.p_align        resb 8        ;    /* Alignment in memory and file. */
+endstruc
+
+; MACROS
 %macro PUSH_ALL 0
     push	rax
     push	rbx
