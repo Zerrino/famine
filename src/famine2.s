@@ -15,7 +15,6 @@ _start:
 print_rax:
 
     PUSH_ALL
-
     ; Utilisation d’un buffer sur la pile
     sub     rsp, 64             ; réserver 32 bytes
     lea     rsi, [rsp + 64]     ; rsi = fin du buffer
@@ -728,8 +727,6 @@ end_:
 		test	al, al
 		jz		.exit_ret
 
-		mov		rax, [rel new_entry]
-		call	print_rax
 
 		jmp		[rel new_entry]
 

@@ -52,6 +52,7 @@ endstruc
 
 ; MACROS
 %macro PUSH_ALL 0
+    pushfq
     push	rax
     push	rbx
     push	rcx
@@ -85,6 +86,7 @@ endstruc
     pop		rcx
     pop		rbx
     pop		rax
+    popfq
 %endmacro
 
 
