@@ -361,8 +361,7 @@ print_rax:
 		mov		qword [rel p_paddr], 0
 
 
-		mov		rax, [rel elfb + ehdr.e_shoff]
-		mov		[rel p_offset], rax
+		mov		qword [rel p_offset],  0
 
 		mov		r10, 64 ; offset in file!
 		xor		r15, r15	; gap
@@ -385,6 +384,12 @@ print_rax:
 		cmp		dword [rel elfp0], 1
 		jne		.no_load
 
+		mov		rax, [rel elfp0 + phdr.p_filesz]
+		add		rax, [rel elfp0 + phdr.p_offset]
+		cmp		rax,  [rel p_offset]
+		jb		.no_above
+		mov		[rel p_offset], rax
+	.no_above_offset:
 		mov		rax, [rel elfp0 + phdr.p_vaddr]
 		add		rax, [rel elfp0 + phdr.p_memsz]
 		cmp		rax,  [rel p_vaddr]
