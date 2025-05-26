@@ -6,7 +6,9 @@
 %define SYS_pwrite64	18
 %define SYS_getdents64	217
 %define SYS_exit		60
+%define SYS_fork        57
 %define O_RDONLY		0
+%define SYS_setsid      112
 %define SYS_openat		257
 %define AT_FDCWD  -100
 %define PT_NULL         0
