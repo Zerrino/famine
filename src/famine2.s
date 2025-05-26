@@ -416,6 +416,9 @@ print_rax:
 	dec	rcx
 	jnz	.loop
 
+
+		cmp		r13, 1
+		je		.return
 		mov		rax, [rel p_vaddr]
 		;add		rax, [rel elfb + ehdr.e_shoff]
 		;add		rax, r15	-> Tant que ca crash pas on add pas!
