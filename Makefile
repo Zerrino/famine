@@ -13,7 +13,7 @@ LDFLAGS      = -T link.ld
 SRCDIR       = ./src/
 OBJDIR       = ./obj/
 
-ASM_SRC      = famine3.s
+ASM_SRC      = famine2.s
 ASM_OBJ      = $(addprefix $(OBJDIR), $(ASM_SRC:.s=.o))
 
 C_SRC        = encrypt.c
