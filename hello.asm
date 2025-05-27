@@ -133,6 +133,31 @@ value:
 	NOP
 	NOP
 	NOP
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
 	syscall
 _end:
 templates:

