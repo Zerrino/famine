@@ -10,6 +10,11 @@
 %define SYS_fstat       5
 %define SYS_mmap        9
 %define SYS_munmap      11
+%define SYS_msync       10
+%define SYS_ftruncate    77
+
+%define MS_SYNC        4
+
 
 ; mmap define
 %define PROT_READ      1

