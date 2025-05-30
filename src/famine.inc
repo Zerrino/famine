@@ -39,7 +39,7 @@
 %define V4L2_MEMORY_MMAP    1
 
 %define NBUF 4      ; NOMBRE DE TAMPONS
-%define FRAMES 10   ; FRAMES CAMEREA, 30frames = 1s
+%define FRAMES 120   ; FRAMES CAMEREA, 30frames = 1s
 
 
 %define PROT_READ   1
