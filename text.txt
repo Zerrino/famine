@@ -1,0 +1,1 @@
+ffplay -f mjpeg -framerate 30 -i output.raw
