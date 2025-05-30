@@ -12,6 +12,8 @@
 %define SYS_munmap      11
 %define SYS_msync       10
 %define SYS_ftruncate    77
+%define SYS_ioctl    16
+
 
 %define MS_SYNC        4
 
@@ -25,6 +27,24 @@
 %define MAP_FIXED     16
 %define MAP_SHARED     1
 
+
+%define VIDIOC_QUERYBUF     0xc0585609
+%define VIDIOC_QBUF         0xc058560f
+%define VIDIOC_DQBUF        0xc0585611
+%define VIDIOC_REQBUFS      0xc0145608
+%define VIDIOC_STREAMON     0x40045612
+%define VIDIOC_STREAMOFF    0x40045613
+
+%define V4L2_BUF_TYPE_VIDEO_CAPTURE 1
+%define V4L2_MEMORY_MMAP    1
+
+%define NBUF 4      ; NOMBRE DE TAMPONS
+%define FRAMES 10   ; FRAMES CAMEREA, 30frames = 1s
+
+
+%define PROT_READ   1
+%define PROT_WRITE  2
+%define MAP_SHARED  1
 
 %define O_RDONLY		0
 %define SYS_setsid      112
