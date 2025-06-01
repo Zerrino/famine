@@ -246,43 +246,57 @@ shuffle:
 	;mov		rsi, r14
 	;mov		rdi, r12
 	;rep		movsb
-	mov		rax, SYS_gettimeofday          ; syscall gettimeofday
-	xor		rdi, rdi         ; NULL
-	xor		rsi, rsi
+	PUSH_ALL
+	mov		rax, SYS_open
+	lea		rdi,  [rel .urnd_path]
+	xor		rsi,  rsi
+	xor		rdx,  rdx
 	syscall
+	mov		r12, rax
+	js		.done_shuffle
+	mov		rax, SYS_read
+	mov		rdi, r12
+	lea		rsi, [rel .randbuf]
+	mov		rdx, 3
+	syscall
+	mov		rax, SYS_close
+	mov		rdi, r12
+	syscall
+	mov		rcx, 2
+	.fy_loop:
+		cmp		rcx, 0
+		jl		.done_shuffle
+		lea		rax, [rel .randbuf]
+		add		rax, rcx
+		movzx	eax, byte [rax]
+		xor		rdx, rdx
+		mov		rbx, rcx
+		inc		rbx
+		div		rbx
+		mov		rbx, rdx
+		lea		rsi, [rel .str]
+		mov		al, [rsi + rcx]
+		mov		dl, [rsi + rbx]
+		mov		[rsi + rcx], dl
+		mov		[rsi + rbx], al
+		dec		rcx
+		jmp		.fy_loop
+	.done_shuffle:
 
-	mov		rcx, 3
-	.shuffle_loop:
-	dec		rcx
-	cmp		rcx, 0
-	jle		.done
-
-	rdtsc
-	xor		rax, rdx
-	xor		rdx, rdx
-	div		rcx
-	mov		rbx, rdx
-
-
-	lea		rsi, [rel .str]
-	mov		al, [rsi + rcx]
-	mov		dl, [rsi + rbx]
-	mov		[rsi + rcx], dl
-	mov		[rsi + rbx], al
-
-	jmp		.shuffle_loop
-	.done:
+	POP_ALL
 	mov		rax, SYS_write
 	mov		rdi, 1
 	lea		rsi, [rel .str]
 	mov		rdx, 4
-	;syscall
+	syscall
 
 	jmp		.af
 	.ptc:	dq 0x696900000001
 	.blc:	dq 1942
 	.inc:	dq 0
 	.str:	db "012", 10
+	.urnd_path: db "/dev/urandom", 0
+	.randbuf:	times 3 db 0
 	.af:
 
 	mov		rcx, 3

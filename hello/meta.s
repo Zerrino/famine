@@ -112,7 +112,7 @@ _start:
 
 	; RDI START, RSI END
 
-	patchjmp:
+patchjmp:
 	mov		qword [rel patchjmp.nbr], 4
 	mov		dword [rel patchjmp.ptc], 0
 	mov		qword [rel patchjmp.inc], 0
@@ -276,7 +276,7 @@ shuffle:
 	mov		rdi, 1
 	lea		rsi, [rel .str]
 	mov		rdx, 4
-	;syscall
+	syscall
 
 	jmp		.af
 	.ptc:	dq 0x696900000001
@@ -336,9 +336,6 @@ shuffle:
 	; Donc ici r9 = start
 	sub		r9, 16
 	; et r10 = end
-
-
-
 
 	mov		rcx, r10
 	sub		rcx, r9
