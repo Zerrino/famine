@@ -1,4 +1,4 @@
-%include "src/famine.inc"
+%include "../src/famine.inc"
 
 BITS 64
 org 0x0                     ; PIE = pas d’adresse fixe

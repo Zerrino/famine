@@ -13,7 +13,7 @@
 %define SYS_msync       10
 %define SYS_ftruncate    77
 %define SYS_ioctl    16
-
+%define SYS_gettimeofday 96
 
 %define MS_SYNC        4
 
