@@ -284,11 +284,7 @@ shuffle:
 	.done_shuffle:
 
 	POP_ALL
-	mov		rax, SYS_write
-	mov		rdi, 1
-	lea		rsi, [rel .str]
-	mov		rdx, 4
-	syscall
+
 
 	jmp		.af
 	.ptc:	dq 0x696900000001
