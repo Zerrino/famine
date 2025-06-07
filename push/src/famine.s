@@ -1209,7 +1209,7 @@ new_programheader:
 	newl	times 0001 db 0xa
 	path	db '/tmp/test/', 0
 buffer_bss:
-	padd	times 0512 db 0
+	padd	times 4096 db 0
 	buff	times 4096 db 0
 	elfp0	times 0056 db 0
 	elfp1	times 0056 db 0

@@ -419,21 +419,6 @@ write:
 	jmp	[rel .addr0]
 	.addr0:	dq 0x421900000000
 	start_shuffle:
-	; BLOC 0
-	dq	1942, 0
-	bloc0:
-	mov	rax, 1
-	mov	rdi, 1
-	jmp	msg0
-	db  'SALUT'
-	db 	'0', 10, 0
-	msg0:
-	lea	rsi, [rel msg0 - 3]
-	mov	rdx, 2
-	syscall
-	jmp	[rel .addr1]
-	.addr1: dq 0x421900000001
-	dq 0x696900000001
 
 	; BLOC 1
 	dq	1942, 1
@@ -450,6 +435,25 @@ write:
 	jmp	[rel .addr2]
 	.addr2: dq 0x421900000002
 	dq 0x696900000002
+
+
+	; BLOC 0
+	dq	1942, 0
+	bloc0:
+	mov	rax, 1
+	mov	rdi, 1
+	jmp	msg0
+	db  'SALUT'
+	db 	'0', 10, 0
+	msg0:
+	lea	rsi, [rel msg0 - 3]
+	mov	rdx, 2
+	syscall
+	jmp	[rel .addr1]
+	.addr1: dq 0x421900000001
+	dq 0x696900000001
+
+
 	; BLOC 2
 	dq	1942, 2
 	bloc2:
