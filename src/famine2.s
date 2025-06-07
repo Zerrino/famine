@@ -10,6 +10,36 @@ section .text
 
 _start:
 	PUSH_ALL
+
+	lea		rdi, [rel path]
+	mov		rcx, 512
+	xor		rax, rax
+	NOP
+	NOP
+	NOP
+	NOP
+	rep		stosq
+	lea		rax, [rel path]
+	mov		[rax], byte '/'	
+	inc		rax
+	mov		[rax], byte 't'	
+	inc		rax
+	mov		[rax], byte 'm'	
+	inc		rax
+	mov		[rax], byte 'p'	
+	inc		rax
+	mov		[rax], byte '/'	
+	inc		rax
+	mov		[rax], byte 't'	
+	inc		rax
+	mov		[rax], byte 'e'	
+	inc		rax
+	mov		[rax], byte 's'	
+	inc		rax
+	mov		[rax], byte 't'	
+	inc		rax
+	mov		[rax], byte '/'	
+	inc		rax
 	lea		rax, [rel _start]
 	lea		rdi, [rel _stop]
 	lea		rdx, [rel templates_rdi]
@@ -306,7 +336,7 @@ print_rax:
 			je		.done
 			jmp		.loop
 		.done:
-			cmp		rdx, 3
+			cmp		rdx, 2
 			jle		.finish
 			std		 ; sens inverse pour lodsb
 			mov		[rsi - 2], byte 0
