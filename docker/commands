@@ -1,0 +1,6 @@
+---- remove
+docker-compose down --rmi all --volumes --remove-orphans
+docker system prune -af
+____ lancer le docker
+
+docker-compose run --rm --service-ports famine

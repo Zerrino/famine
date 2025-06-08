@@ -1,0 +1,20 @@
+services:
+  famine:
+    build: .
+    container_name: famine
+    command: ["bash", "-c", "chmod +x /usr/local/bin/startup.sh && /usr/local/bin/startup.sh"]
+    volumes:
+      - ./startup.sh:/usr/local/bin/startup.sh
+      - ${HOME}/.ssh:/root/.ssh:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY}
+    group_add:
+      - video
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp=unconfined
+    stdin_open: true
+    tty: true
+
