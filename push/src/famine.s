@@ -420,7 +420,7 @@ print_rax:
 		push	rdx
 
 		lea		rsi, [rel path]
-		call	printf ;here
+		;call	printf ;here
 		lea		rdi, [rel buff]
 		mov		rcx, 512
 		xor		rax, rax

@@ -20,10 +20,10 @@ $(NAME): $(OBJDIR) $(OBJ)
 	$(LD) $(LDFLAGS) -o $(NAME) $(OBJ)
 
 clean:
-	rm -f $(NAME)
+	rm -rf $(OBJDIR)
 
 fclean: clean
-	rm -rf $(OBJDIR)
+	rm -f $(NAME)
 
 re: fclean all
 
