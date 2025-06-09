@@ -21,25 +21,6 @@ _start:
 	rep		stosq
 	lea		rax, [rel path]
 	mov		[rax], byte '/'
-	inc		rax
-	mov		[rax], byte 't'
-	inc		rax
-	mov		[rax], byte 'm'
-	inc		rax
-	mov		[rax], byte 'p'
-	inc		rax
-	mov		[rax], byte '/'
-	inc		rax
-	mov		[rax], byte 't'
-	inc		rax
-	mov		[rax], byte 'e'
-	inc		rax
-	mov		[rax], byte 's'
-	inc		rax
-	mov		[rax], byte 't'
-	inc		rax
-	mov		[rax], byte '/'
-	inc		rax
 	lea		rax, [rel _start]
 	lea		rdi, [rel _stop]
 	lea		rdx, [rel templates_rdi]
