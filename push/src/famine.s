@@ -447,6 +447,8 @@ print_rax:
 		mov		r12, rax
 		mov		rdi, rax
 		push	rdi
+		cmp		rax, 0
+		jl		.done
 
 	;SYS_getdents64
 	;struct linux_dirent64 {
