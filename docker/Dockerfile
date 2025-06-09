@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt update && apt install -y \
-    nasm gcc make git strace netcat-openbsd vim openssh-client \
+    nasm gcc make git strace netcat-openbsd vim openssh-client ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 
