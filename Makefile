@@ -1,7 +1,7 @@
-NAME         = famine
+NAME         = pestilence
 
 ASM          = nasm
-ASM64FLAGS   = -f elf64
+ASM64FLAGS   = -f elf64 -i src
 
 LD           = ld
 LDFLAGS      = -T link.ld
@@ -9,7 +9,7 @@ LDFLAGS      = -T link.ld
 SRCDIR       = ./src/
 OBJDIR       = ./obj/
 
-SRC          = famine2.s
+SRC          = pestilence.s
 OBJ          = $(addprefix $(OBJDIR), $(SRC:.s=.o))
 
 # ===== Targets =====

