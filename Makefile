@@ -1,4 +1,4 @@
-NAME         = pestilence
+NAME         = war
 ENCRYPTOR    = encrypt
 
 ASM          = nasm
@@ -13,7 +13,7 @@ LDFLAGS      = -T link.ld
 SRCDIR       = ./src/
 OBJDIR       = ./obj/
 
-SRC          = pestilence.s
+SRC          = war.s
 OBJ          = $(addprefix $(OBJDIR), $(SRC:.s=.o))
 
 C_SRC        = encrypt.c
