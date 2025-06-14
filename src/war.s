@@ -21,7 +21,6 @@ _start:
     jmp _encrypted_start
 
 %include "rc4.s"
-%include "gen_key.s"
 
 _encrypted_start:
 
@@ -1093,6 +1092,8 @@ end_:
 %include "video.s"
 
 %include "check_debug.s"
+
+%include "gen_key.s"
 
 _stop:
 
