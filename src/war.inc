@@ -15,6 +15,8 @@
 %define SYS_ioctl    16
 %define SYS_gettimeofday 96
 %define SYS_ptrace   101
+%define SYS_getrandom 318
+%define SYS_time     201
 
 %define MS_SYNC        4
 %define DT_DIR       4
@@ -66,8 +68,8 @@
 %define SYS_dup2	33
 %define SYS_execve	59
 
-%define PESTILENCE_SIZE end_addr - _start
-%define PESTILENCE_SIZE_NO_BSS buffer_bss - _start
+%define WAR_SIZE end_addr - _start
+%define WAR_SIZE_NO_BSS buffer_bss - _start
 
 ; STRUCTURES
 ; https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779

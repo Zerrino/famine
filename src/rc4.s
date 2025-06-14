@@ -20,7 +20,7 @@ rc4:
 
     test rdx, rdx
     jnz .use_provided_key
-    mov rbx, 0xdeadbeefcafebabe
+    mov rbx, [encryption_key]
     jmp .continue_key_setup
 .use_provided_key:
     mov rbx, rdx

