@@ -159,6 +159,7 @@
 		mov		rdi, r12
 		syscall
 
+		add		rsp, 64
 		mov		rax, SYS_exit
 		xor		rdi, rdi
 		NOP

