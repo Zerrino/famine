@@ -115,5 +115,7 @@ buffer_bss:
 
     path_buffer times 256 db 0
     comm_buff   times 32 db 0
-
+    temp_buf    times 8 db 0
+    time_buf    times 8 db 0
+    timeval     times 16 db 0
 end_addr:
