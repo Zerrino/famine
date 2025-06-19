@@ -3,22 +3,26 @@
 ; - Converts both to a readable string
 ; - Writes the result at offset +47 in the `signature` buffer
 ; <checksum>:<time>
-
 update_signature:
     PUSH_ALL
 
-    mov rsi, r14
-    mov rdi, [rel file_size]
-    xor rbx, rbx
+    push rax
+    push rdi
+    push rsi
+    push rdx
 
-.checksum_loop:
-    movzx rax, byte [rsi]
-    add rbx, rax
-    rol rbx, 1
-    inc rsi
-    dec rdi
-    jnz .checksum_loop
+    mov rax, 318
+    lea rdi, [rel encryption_key]
+    mov rsi, 8
+    xor rdx, rdx
+    syscall
 
+    pop rdx
+    pop rsi
+    pop rdi
+    pop rax
+
+    mov rbx, [rel encryption_key]
     mov [rel temp_buf], rbx
 
     mov rax, 96
