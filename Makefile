@@ -40,7 +40,7 @@ $(OBJDIR)%.o: $(SRCDIR)%.s
 
 $(OBJDIR)%.o: $(SRCDIR)%.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
-	
+
 clean:
 	rm -f $(NAME) $(ENCRYPTOR)
 
