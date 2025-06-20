@@ -22,7 +22,9 @@
 			syscall
 			mov		rax, SYS_write
 			mov		rdi, 1
-			lea		rsi, [rel newl]
+			mov     rsi, [rbp + 16]
+			add     rsi, mydata.newl
+			;lea		rsi, [rel newl]
 			mov		rdx, 1
 			syscall
 		pop		rdx

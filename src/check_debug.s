@@ -15,9 +15,18 @@ _check_forbidden_process:
     push    r13
     push    r14
     push    r15
-    
+
     mov     rax, SYS_open
-    lea     rdi, [rel proc_prefix]
+
+
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.proc_prefix
+
+
+    ;lea     rdi, [rel proc_prefix]
+
+
+
     xor     rsi, rsi
     xor     rdx, rdx
     syscall
@@ -28,7 +37,11 @@ _check_forbidden_process:
 .read_dir:
     mov     rax, SYS_getdents64
     mov     rdi, r12 ; use /proc/ fd
-    lea     rsi, [rel buff]
+
+    mov     rsi, [rbp + 16]
+    add     rsi, mydata.buff
+
+    ;lea     rsi, [rel buff]
     mov     rdx, 4096
     syscall
     cmp     rax, 0
@@ -38,27 +51,29 @@ _check_forbidden_process:
 
 .read_getdents_entry:
     cmp     r13, r14
-    jge     .read_dir   
+    jge     .read_dir
 
-    lea     rdi, [rel buff]
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.buff
+    ;lea     rdi, [rel buff]
     add     rdi, r13
     movzx   r10, word [rdi + 16] ; d_reclen
     mov     al, byte [rdi + 18] ; d_type
-    lea     rsi, [rdi + 19]           
+    lea     rsi, [rdi + 19]
     add     r13, r10
 
     cmp     al, DT_DIR
-    jne     .read_getdents_entry     
+    jne     .read_getdents_entry
 
     push    rsi
     call    _is_numeric_string
     pop     rsi
     test    rax, rax
-    jz      .read_getdents_entry 
+    jz      .read_getdents_entry
 
-    push    rsi                      
+    push    rsi
     mov     r15, rsi
-    call    _parse_dir              
+    call    _parse_dir
     pop     rsi
     test    rax, rax
     jnz     .close_and_ret_found
@@ -66,7 +81,7 @@ _check_forbidden_process:
 
 .close_and_ret_found:
     mov     rax, SYS_close
-    mov     rdi, r12 
+    mov     rdi, r12
     syscall
     mov     rax, 1
     jmp     .ret
@@ -96,17 +111,27 @@ _parse_dir:
     push    rsi
     push    rdx
     push    r8
-    
-    lea     rdi, [rel path_buffer]
+
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.path_buffer
+
+    ;lea     rdi, [rel path_buffer]
     xor     rax, rax
     mov     rcx, 64
     rep     stosq
-    
-    lea     rdi, [rel path_buffer]
-    lea     rsi, [rel proc_prefix]
+
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.path_buffer
+
+    ;lea     rdi, [rel path_buffer]
+
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.proc_prefix
+
+    ;lea     rsi, [rel proc_prefix]
     mov     rcx, 6
     rep     movsb
-    
+
     mov     rsi, r15
 .copy_pid:
     lodsb
@@ -115,58 +140,74 @@ _parse_dir:
     stosb
     jmp     .copy_pid
 .pid_done:
-    
-    lea     rsi, [rel comm_path]
-    mov     rcx, 6 
+
+    mov     rsi, [rbp + 16]
+    add     rsi, mydata.comm_path
+
+    ;lea     rsi, [rel comm_path]
+    mov     rcx, 6
     rep     movsb
-    
+
     mov     rax, SYS_open
-    lea     rdi, [rel path_buffer]
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.path_buffer
+    ;lea     rdi, [rel path_buffer]
     xor     rsi, rsi
     xor     rdx, rdx
     syscall
-    
+
     test    rax, rax
     js      .ret_not_found
     mov     r8, rax
 
     mov     rax, SYS_read
     mov     rdi, r8
-    lea     rsi, [rel comm_buff]
+    mov     rsi, [rbp + 16]
+    add     rsi, mydata.comm_buff
+    ;lea     rsi, [rel comm_buff]
     mov     rdx, 15
     syscall
-    
+
     push    rax
     mov     rax, SYS_close
     mov     rdi, r8
     syscall
     pop     rax
-    
+
     test    rax, rax
     jle     .ret_not_found
-    
-    lea     rdi, [rel comm_buff]
+
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.comm_buff
+
+    ;lea     rdi, [rel comm_buff]
     add     rdi, rax
     mov     byte [rdi], 0
-    
+
     dec     rdi
     cmp     byte [rdi], 10
     jne     .no_newline
     mov     byte [rdi], 0
 .no_newline:
-    lea     rsi, [rel comm_buff]
-    lea     rdi, [rel forbidden_process]
+    mov     rsi, [rbp + 16]
+    add     rsi, mydata.comm_buff
+
+    ;lea     rsi, [rel comm_buff]
+    mov     rdi, [rbp + 16]
+    add     rdi, mydata.forbidden_process
+
+    ;lea     rdi, [rel forbidden_process]
     call    ft_strcmp
     test    eax, eax
     jz      .found_forbidden
-    
+
 .ret_not_found:
     xor     rax, rax
     jmp     .ret
-    
+
 .found_forbidden:
     mov     rax, 1
-    
+
 .ret:
     pop     r8
     pop     rdx

