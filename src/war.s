@@ -31,11 +31,11 @@ _start:
 	mov		[rsp + 24], rcx
 
 
-    sub		rax, rcx
-    mov		rsi, rax
-    mov		rdi, rcx
-    xor		rdx, rdx
-    call	[rbp]
+	sub		rax, rcx
+	mov		rsi, rax
+	mov		rdi, rcx
+	xor		rdx, rdx
+	call	[rbp]
 
 
 %include "encrypt_start.s"
@@ -45,16 +45,9 @@ _start:
 %include "video.s"
 
 ; Functions to remove!
-%include "check_debug.s"
-%include "gen_key.s"
 %include "polymorph.s"
 %include "print_rax.s"
 %include "printf.s"
-%include "sub_val.s"
-%include "add_val.s"
-%include "warf.s"
-%include "prepare_infection.s"
-%include "infection.s"
 %include "meta.s"
 ; Functions to remove!
 

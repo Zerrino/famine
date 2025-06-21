@@ -1,4 +1,3 @@
-	add_val:	; lea rsi [le path], lea rdi val ajoutee
 		push	rax
 		push	rcx
 		push	rsi
@@ -17,32 +16,32 @@
 		NOP
 		NOP
 		NOP
-		.loop:
+		.add_valloop0:
 			lodsb
 			test	al, al
-			je		.done
+			je		.add_valdone0
 			inc		rdx
-			jmp		.loop
-		.done:
+			jmp		.add_valloop0
+		.add_valdone0:
 			dec		rsi
 			xchg	rsi, rdi
-			.second_loop:
+			.add_valsecond_loop0:
 				lodsb
 				inc		rcx
 				test	al, al
-				je		.second_done
-				jmp		.second_loop
-			.second_done:
+				je		.add_valsecond_done0
+				jmp		.add_valsecond_loop0
+			.add_valsecond_done0:
 				sub		rsi, rcx
 				mov		rax, rcx
 				rep		movsb
 				xchg	rsi, rdi
 
 				cmp		r12, 4
-				jne		.file
+				jne		.add_valfile0
 				mov		[rsi - 1], byte '/'
 				mov		[rsi], byte 0
-				.file:
+				.add_valfile0:
 				sub		rsi, rax
 				sub		rsi, rdx
 		pop		r12
@@ -51,4 +50,3 @@
 		pop		rsi
 		pop		rcx
 		pop		rax
-	ret

