@@ -1,4 +1,5 @@
 shuffle:
+	PUSH_ALL
 	xor		r13, r13
 	mov		r14, rdi
 	mov		r15, rsi
@@ -35,12 +36,12 @@ shuffle:
 	mov		rax, SYS_read
 	mov		rdi, r12
 	lea		rsi, [rel .randbuf]
-	mov		rdx, 3
+	mov		rdx, N_BLOCKS
 	syscall
 	mov		rax, SYS_close
 	mov		rdi, r12
 	syscall
-	mov		rcx, 2
+	mov		rcx, N_BLOCKS - 1
 	.fy_loop:
 		cmp		rcx, 0
 		jl		.done_shuffle
@@ -67,12 +68,15 @@ shuffle:
 	.ptc:	dq 0x696900000001
 	.blc:	dq 1942
 	.inc:	dq 0
-	.str:	db "012", 10
+	.str:
+	%rep N_BLOCKS
+		db %$ - .str
+	%endrep
 	.urnd_path: db "/dev/urandom", 0
-	.randbuf:	times 3 db 0
+	.randbuf:	times N_BLOCKS db 0
 	.af:
 
-	mov		rcx, 3
+	mov		rcx, N_BLOCKS
 
 	.big_loop:
 	cmp		rcx, 0
@@ -89,7 +93,7 @@ shuffle:
 	add		rsi, rax
 
 	mov		al, [rsi]
-	sub		al, '0'
+	;sub		al, '0'
 	mov		 [rel .inc], al
 	inc		al
 	mov		 [rel .ptc], al
@@ -153,4 +157,5 @@ shuffle:
 	mov		rdi, r12
 	mov		rsi, rcx
 	syscall
+	POP_ALL
 ret

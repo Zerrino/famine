@@ -1,11 +1,11 @@
 patchjmp:
 	PUSH_ALL
-	mov		qword [rel patchjmp.nbr], 5
+	mov		qword [rel patchjmp.nbr], 255
 	mov		dword [rel patchjmp.ptc], 0
 	mov		qword [rel patchjmp.inc], 0
 	jmp	.start
-	.nbr:	dq 5
-	.adr:	times 5 dq 0
+	.nbr:	dq 255
+	.adr:	times 255 dq 0
 	.ptc:	dq 0x421900000000
 	.blc:	dq 1942
 	.inc:	dq 0

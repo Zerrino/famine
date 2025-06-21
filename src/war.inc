@@ -21,6 +21,9 @@
 %define MS_SYNC        4
 %define DT_DIR       4
 
+
+;
+%define N_BLOCKS       9
 ; mmap define
 %define PROT_READ      1
 %define PROT_WRITE     2

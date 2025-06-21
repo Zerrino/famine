@@ -27,7 +27,7 @@ all: $(NAME) $(ENCRYPTOR)
 $(NAME): $(ENCRYPTOR) $(OBJDIR) $(OBJ)
 	$(LD) $(LDFLAGS) -o $(NAME) $(OBJ)
 	chmod +x $(ENCRYPTOR)
-	./$(ENCRYPTOR) $(NAME)
+	# ./$(ENCRYPTOR) $(NAME)
 
 $(ENCRYPTOR): $(C_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^

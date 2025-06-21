@@ -9,7 +9,8 @@
 		mov		rsi, [rbp + 16]
 		add		rsi, mydata.path
 		;lea		rsi, [rel path]
-		call	printf ;here
+		call	[rbp + 40]
+		;call	printf ;here
 
 		mov		rdi, [rbp + 16]
 		add		rdi, mydata.buff
@@ -124,7 +125,7 @@
 			pop		rsi
 			pop		rdi
 
-			call	war
+			call	[rbp + 32]
 
 			push	rsi
 			mov		rsi, [rbp + 16]
