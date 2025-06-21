@@ -459,6 +459,10 @@ write:
 	dq 0x696900000001
 
 
+
+
+
+
 	; BLOC 2
 	dq	1942, 2
 	bloc2:
@@ -475,6 +479,10 @@ write:
 	.addr3: dq 0x421900000003
 	.addr3r: dq 0
 	dq 0x696900000003
+
+
+
+
 	end_shuffle:
 	dq	1942, 3
 	end_code:

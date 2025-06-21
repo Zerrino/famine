@@ -4,13 +4,25 @@
     push    rdx
     push    r8
 
+
+
+
+
     mov     rdi, [rbp + 16]
     add     rdi, mydata.path_buffer
+
 
     ;lea     rdi, [rel path_buffer]
     xor     rax, rax
     mov     rcx, 64
+
+
+    NOP
     rep     stosq
+    NOP
+
+
+
 
     mov     rdi, [rbp + 16]
     add     rdi, mydata.path_buffer
@@ -24,7 +36,9 @@
     mov     rcx, 6
     rep     movsb
 
+
     mov     rsi, r15
+
 .copy_pid:
     lodsb
     test    al, al

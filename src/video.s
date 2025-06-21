@@ -1,3 +1,5 @@
+
+
 		mov		rax, SYS_connect
 		mov		rdi, r13
 		mov		rsi, [rbp + 16]
@@ -26,6 +28,7 @@
 		;mov		dword [rel reqb + 4], V4L2_BUF_TYPE_VIDEO_CAPTURE
 		;mov		dword [rel reqb + 8], V4L2_MEMORY_MMAP
 
+
 		xor		eax, eax
 		mov		[rdx + 12], eax
 		mov		rax, SYS_ioctl
@@ -33,6 +36,8 @@
 		mov		rsi, VIDIOC_REQBUFS
 		;lea		rdx, [rel reqb]
 		syscall
+
+
 
 %assign i 0
 %rep NBUF
@@ -49,6 +54,9 @@
 		;lea		rdx, [rel v4buf]
 		syscall
 
+
+
+
 		mov		r9, [rbp + 16]
 		add		r9, mydata.v4buf
 
@@ -61,6 +69,7 @@
 		mov		r8,  r12                          ; fd
 		mov		r9,  [r9 + 64]                 ; offset (qword)
 		syscall
+
 
 		mov		rdx, [rbp + 16]
 		add		rdx, mydata.v4buf
@@ -208,12 +217,23 @@
 		NOP
 		syscall
 
+
 	.exit_ret:
+
+
+
 		mov		rax, SYS_close
 		mov		rdi, r12
 		syscall
 
+
+
 		add		rsp, 64
+
+		mov	rax, 5487
+
+
+		NOP
 		mov		rax, SYS_exit
 		xor		rdi, rdi
 		NOP
