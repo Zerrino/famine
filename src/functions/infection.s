@@ -239,6 +239,7 @@
 	%include "functions/updata_signature.s"
 	;call update_signature
 
+	;	le mmap de death
 	mov rax, SYS_mmap
 	xor rdi, rdi
 	mov rsi, WAR_SIZE_NO_BSS
@@ -247,6 +248,7 @@
 	mov r8, -1
 	xor r9, r9
 	syscall
+	;
 
 	cmp rax, -4095
 	jae .returninfection

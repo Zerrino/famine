@@ -6,7 +6,7 @@ polymorph:
 	sub		rcx, rax
 	sub		rcx, r8
 
-	loop_start:
+	.loop_start:
 
 	PUSH_ALL
 	mov		r15, rax
@@ -109,6 +109,6 @@ polymorph:
 	inc		rax
 	dec		rcx
 	test	rcx, rcx
-	jne		loop_start
+	jne		.loop_start
 	POP_ALL
 	ret

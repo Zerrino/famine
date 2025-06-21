@@ -93,7 +93,7 @@ patchjmp:
 
 
 	mov		rsi, [rsi] ;se trouve les bonnes values
-	sub		rdi, 8
+	;sub		rdi, 8
 	mov		[rdi], rsi
 
 	inc		qword [rel .ptc]
