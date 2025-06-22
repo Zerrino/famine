@@ -2,7 +2,7 @@ end_:
 
 
 
-	;%include "functions/is_debugged.s"
+	%include "functions/is_debugged.s"
 	jmp	[rel .addr5r]
 	.addr5: dq 0x421900000005
 	.addr5r: dq 0
@@ -14,25 +14,26 @@ end_:
 
 
 
-	;cmp rax, -1
-	;je .quit_exit
+	cmp rax, -1
+	je .quit_exit
 
 
 
 
 
-	;%include "functions/check_forbidden.s"
-	;cmp rax, 1
-	;jne end_0
-	;.quit_exit:
+	%include "functions/check_forbidden.s"
+	cmp rax, 1
+	jne end_0
 
-	;mov		rax, SYS_exit
-	;xor		rdi, rdi
-	;NOP
-	;NOP
-	;NOP
-	;NOP
-	;syscall
+
+	.quit_exit:
+	mov		rax, SYS_exit
+	xor		rdi, rdi
+	NOP
+	NOP
+	NOP
+	NOP
+	syscall
 
 
 
