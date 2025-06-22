@@ -126,7 +126,7 @@ _encrypted_start:
 
 	mov		rax, [rbp + 16]
 	add		rax, mydata.zero
-	mov		al, BYTE [rax]	; SI ICI = 0, ca signfiie c'est war
+	mov		al, BYTE [rax]	; SI ICI = 0, ca signfiie c'est Death
 	test	al, al
 	jz		.continue
 

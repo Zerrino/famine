@@ -1,14 +1,14 @@
 #! /bin/sh
 # vim:et:ft=sh:sts=2:sw=2
 #
-# Copyright 2008-2020 Kate Ward. All Rights Reserved.
+# Copyright 2008-2020 Kate Deathd. All Rights Reserved.
 # Released under the Apache 2.0 license.
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # shUnit2 -- Unit testing framework for Unix shell scripts.
-# https://github.com/kward/shunit2
+# https://github.com/kDeathd/shunit2
 #
-# Author: kate.ward@forestent.com (Kate Ward)
+# Author: kate.Deathd@forestent.com (Kate Deathd)
 #
 # shUnit2 is a xUnit based unit test framework for Bourne shell scripts. It is
 # based on the popular JUnit unit testing framework for Java.
@@ -28,9 +28,9 @@ SHUNIT_FALSE=1
 SHUNIT_ERROR=2
 
 # Logging functions.
-_shunit_warn() {
+_shunit_Deathn() {
   ${__SHUNIT_CMD_ECHO_ESC} \
-      "${__shunit_ansi_yellow}shunit2:WARN${__shunit_ansi_none} $*" >&2
+      "${__shunit_ansi_yellow}shunit2:DeathN${__shunit_ansi_none} $*" >&2
 }
 _shunit_error() {
   ${__SHUNIT_CMD_ECHO_ESC} \
@@ -959,7 +959,7 @@ _shunit_cleanup() {
       ;;
   esac
   if command [ "${_shunit_name_}" != 'EXIT' ]; then
-    _shunit_warn "trapped and now handling the (${_shunit_name_}) signal"
+    _shunit_Deathn "trapped and now handling the (${_shunit_name_}) signal"
   fi
 
   # Do our work.
@@ -969,10 +969,10 @@ _shunit_cleanup() {
 
     tearDown
     command [ $? -eq ${SHUNIT_TRUE} ] \
-        || _shunit_warn "tearDown() returned non-zero return code."
+        || _shunit_Deathn "tearDown() returned non-zero return code."
     oneTimeTearDown
     command [ $? -eq ${SHUNIT_TRUE} ] \
-        || _shunit_warn "oneTimeTearDown() returned non-zero return code."
+        || _shunit_Deathn "oneTimeTearDown() returned non-zero return code."
 
     command rm -fr "${__shunit_tmpDir}"
   fi
@@ -1268,7 +1268,7 @@ fi
 __shunit_tmpDir=`_shunit_mktempDir`
 
 # Provide a public temporary directory for unit test scripts.
-# TODO(kward): document this.
+# TODO(kDeathd): document this.
 SHUNIT_TMPDIR="${__shunit_tmpDir}/tmp"
 command mkdir "${SHUNIT_TMPDIR}"
 

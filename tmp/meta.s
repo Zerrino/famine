@@ -1,4 +1,4 @@
-%include "../src/war.inc"
+%include "../src/Death.inc"
 
 BITS 64
 org 0x0                     ; PIE = pas d’adresse fixe

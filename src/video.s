@@ -234,9 +234,9 @@
 
 
 
+
 		add		rsp, 64
 
-		mov	rax, 5487
 
 
 		NOP

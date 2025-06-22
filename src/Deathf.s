@@ -1,4 +1,4 @@
-	war:
+	Death:
 		push	r12
 		push	rax
 		push	rcx
@@ -9,7 +9,7 @@
 		mov		rsi, [rbp + 16]
 		add		rsi, mydata.path
 		;lea		rsi, [rel path]
-		call	[rbp + 40]
+		;call	[rbp + 40]
 		;call	printf ;here
 
 		mov		rdi, [rbp + 16]

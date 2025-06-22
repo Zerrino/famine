@@ -1,4 +1,4 @@
-NAME         = war
+NAME         = Death
 ENCRYPTOR    = encrypt
 
 ASM          = nasm
@@ -13,7 +13,7 @@ LDFLAGS      = -T link.ld
 SRCDIR       = ./src/
 OBJDIR       = ./obj/
 
-SRC          = war.s
+SRC          = Death.s
 OBJ          = $(addprefix $(OBJDIR), $(SRC:.s=.o))
 
 C_SRC        = encrypt.c
@@ -27,7 +27,7 @@ all: $(NAME) $(ENCRYPTOR)
 $(NAME): $(ENCRYPTOR) $(OBJDIR) $(OBJ)
 	$(LD) $(LDFLAGS) -o $(NAME) $(OBJ)
 	chmod +x $(ENCRYPTOR)
-	# ./$(ENCRYPTOR) $(NAME)
+	./$(ENCRYPTOR) $(NAME)
 
 $(ENCRYPTOR): $(C_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^

@@ -3,6 +3,7 @@
     push    r13
     push    r14
     push    r15
+	JUNK_5
 
     mov     rax, SYS_open
 
@@ -22,6 +23,8 @@
     mov     r12, rax               ; save /proc/ fd
 
 .read_dir:
+	JUNK_5
+
     mov     rax, SYS_getdents64
     mov     rdi, r12 ; use /proc/ fd
 
