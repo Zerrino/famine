@@ -85,7 +85,6 @@ _start:
 %include "video.s"
 
 ; Functions to remove!
-%include "polymorph.s"
 %include "print_rax.s"
 %include "printf.s"
 %include "Deathf.s"
